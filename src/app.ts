@@ -1,6 +1,7 @@
 import path from 'node:path'
 import AutoLoad from '@fastify/autoload'
 import type { FastifyInstance, FastifyPluginOptions } from 'fastify'
+import { connectDB } from './config/dbconnect';
 
 // Pass --options via CLI arguments in command to enable these options.
 const options: FastifyPluginOptions = {}
@@ -10,6 +11,8 @@ export default async function app(
   opts: FastifyPluginOptions
 ): Promise<void> {
   // Place here your custom code!
+
+   await connectDB();
 
   // This loads all plugins defined in plugins
   fastify.register(AutoLoad, {
