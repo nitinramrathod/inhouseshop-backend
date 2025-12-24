@@ -7,7 +7,6 @@ import {
   deleteProduct,
 } from "../../../../controllers/product.controller";
 
-
 export default async function productRoutes(fastify: FastifyInstance) {
   fastify.post(
     "/",
@@ -17,20 +16,17 @@ export default async function productRoutes(fastify: FastifyInstance) {
   fastify.get("/", getProducts);
 
   fastify.get(
-    "/:id",
-    
+    "/:id",    
     getProductById
   );
 
   fastify.put(
-    "/:id",
-   
+    "/:id",   
     updateProduct
   );
 
   fastify.delete(
-    "/:id",
-    
+    "/:id",    
     deleteProduct
   );
 }
