@@ -1,5 +1,7 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import User from "../models/user.model";
+import { validateZod } from "../utils/zodValidator";
+import { createUserSchema } from "../schemas/user.schema";
 
 /**
  * Controller for User CRUD operations
@@ -12,13 +14,16 @@ export default class UserController {
     request: FastifyRequest,
     reply: FastifyReply
   ) {
-    try {
-      const user = await User.create(request.body);
+    try {   
 
-      const userObj = user.toObject();
-    //   delete userObj.password;
+      const validatedBody = validateZod(
+        createUserSchema,
+        request.body
+      );
 
-      return reply.code(201).send(userObj);
+      const user = await User.create(validatedBody);
+
+      return reply.code(201).send(user);
     } catch (error: any) {
       return reply.code(400).send({
         message: error.message,

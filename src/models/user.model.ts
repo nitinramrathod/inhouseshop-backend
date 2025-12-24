@@ -1,4 +1,5 @@
-import mongoose, { Schema, Document } from "mongoose";
+import { Schema, model, Document } from "mongoose";
+import bcrypt from 'bcryptjs';
 
 /**
  * Address sub-document
@@ -18,10 +19,14 @@ export interface IUserAddress {
   isDefault: boolean;
 }
 
+export interface IUserMethods {
+  comparePassword(candidatePassword: string): Promise<boolean>;
+}
+
 /**
  * User document
  */
-export interface IUser extends Document {
+export interface IUser extends Document ,IUserMethods{
   firstName: string;
   lastName: string;
   email: string;
@@ -32,6 +37,8 @@ export interface IUser extends Document {
 
   addresses: IUserAddress[];
 }
+
+
 
 const addressSchema = new Schema<IUserAddress>(
   {
@@ -80,4 +87,26 @@ const userSchema = new Schema<IUser>(
   { timestamps: true }
 );
 
-export default mongoose.model<IUser>("User", userSchema);
+// userSchema.pre("save", async function (next) {
+//     if (!this.isModified("password")) return next();
+//     try {
+//       if(!this.password)return;
+//         const salt = await bcrypt.genSalt(12);
+//         this.password = await bcrypt.hash(this.password as string, salt);
+//         next();
+//     } catch (err) {
+//         next(err as any);
+//     }
+// });
+userSchema.pre("save", async function (this: IUser) {
+  if (!this.isModified("password")) return;
+
+  const salt = await bcrypt.genSalt(12);
+  this.password = await bcrypt.hash(this.password, salt);
+});
+
+userSchema.methods.comparePassword = async function (candidatePassword: string): Promise<boolean> {
+  return bcrypt.compare(candidatePassword, this.password);
+};
+
+export default model<IUser>("User", userSchema);

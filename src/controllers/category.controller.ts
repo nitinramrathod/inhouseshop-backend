@@ -1,5 +1,7 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import Category from "../models/category.model";
+import { validateZod } from "../utils/zodValidator";
+import { createCategorySchema } from "../schemas/category.schema";
 
 /**
  * Controller for Category CRUD operations
@@ -13,7 +15,13 @@ export default class CategoryController {
     reply: FastifyReply
   ) {
     try {
-      const category = await Category.create(request.body);
+
+      const validatedBody = validateZod(
+        createCategorySchema,
+        request.body
+      );
+
+      const category = await Category.create(validatedBody);
 
       return reply.code(201).send(category);
     } catch (error: any) {
