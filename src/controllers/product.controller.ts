@@ -13,6 +13,15 @@ export default class ProductController {
     request: FastifyRequest<{ Body: CreateProductInput }>,
     reply: FastifyReply
   ) {
+
+    if (!request.isMultipart()) {
+      return reply
+        .status(422)
+        .send({ error: "Request must be multipart/form-data" });
+    } 
+
+    // await uploadCloudinary(part);
+
     const validatedBody = validateZod(
       createProductSchema,
       request.body
