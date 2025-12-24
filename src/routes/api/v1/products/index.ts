@@ -1,32 +1,26 @@
 import { FastifyInstance } from "fastify";
-import {
-  createProduct,
-  getProducts,
-  getProductById,
-  updateProduct,
-  deleteProduct,
-} from "../../../../controllers/product.controller";
+import ProductController from "../../../../controllers/product.controller";
 
 export default async function productRoutes(fastify: FastifyInstance) {
   fastify.post(
     "/",
-    createProduct
+    ProductController.create
   );
 
-  fastify.get("/", getProducts);
+  fastify.get("/", ProductController.getAll);
 
   fastify.get(
     "/:id",    
-    getProductById
+    ProductController.getById
   );
 
   fastify.put(
     "/:id",   
-    updateProduct
+    ProductController.update
   );
 
   fastify.delete(
     "/:id",    
-    deleteProduct
+    ProductController.delete
   );
 }
