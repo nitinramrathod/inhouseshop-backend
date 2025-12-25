@@ -16,12 +16,21 @@ export default class CategoryController {
   ) {
     try {
 
-      const validatedBody = validateZod(
+      const validationResult = validateZod(
         createCategorySchema,
         request.body
       );
 
-      const category = await Category.create(validatedBody);
+        if (!validationResult.success) {
+      return reply
+        .code(validationResult.statusCode)
+        .send({
+          message: validationResult.message,
+          errors: validationResult.errors,
+        });
+    }
+
+      const category = await Category.create(validationResult.data);
 
       return reply.code(201).send(category);
     } catch (error: any) {

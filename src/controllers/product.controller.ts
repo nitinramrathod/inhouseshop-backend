@@ -22,12 +22,21 @@ export default class ProductController {
 
     // await uploadCloudinary(part);
 
-    const validatedBody = validateZod(
+    const validationResult = validateZod(
       createProductSchema,
       request.body
     );
 
-    const product = await Product.create(validatedBody);
+      if (!validationResult.success) {
+      return reply
+        .code(validationResult.statusCode)
+        .send({
+          message: validationResult.message,
+          errors: validationResult.errors,
+        });
+    }
+
+    const product = await Product.create(validationResult.data);
 
     return reply.code(201).send({
       success: true,

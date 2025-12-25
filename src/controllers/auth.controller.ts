@@ -13,12 +13,21 @@ export async function login(
 ) {
   try {
 
-    const validatedBody = validateZod(
+    const validationResult = validateZod(
         loginSchema,
         request.body
     );
 
-    const { email, password } = validatedBody;
+    if (!validationResult.success) {
+      return reply
+        .code(validationResult.statusCode)
+        .send({
+          message: validationResult.message,
+          errors: validationResult.errors,
+        });
+    }
+
+    const { email, password } = validationResult.data;
  
     // let isValid = await validateLogin(fields, reply);
   

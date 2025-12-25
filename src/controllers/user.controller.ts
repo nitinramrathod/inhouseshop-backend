@@ -11,25 +11,47 @@ export default class UserController {
    * Create a new user
    */
   static async createUser(
-    request: FastifyRequest,
-    reply: FastifyReply
-  ) {
-    try {   
+  request: FastifyRequest,
+  reply: FastifyReply
+) {
+  try {
+    const validationResult = validateZod(
+      createUserSchema,
+      request.body
+    );
 
-      const validatedBody = validateZod(
-        createUserSchema,
-        request.body
-      );
+    if (!validationResult.success) {
+      return reply
+        .code(validationResult.statusCode)
+        .send({
+          message: validationResult.message,
+          errors: validationResult.errors,
+        });
+    }
 
-      const user = await User.create(validatedBody);
+    const {email} = validationResult.data;
 
-      return reply.code(201).send(user);
-    } catch (error: any) {
-      return reply.code(400).send({
-        message: error.message,
+    const existingUser = await User.findOne({ email });
+
+    if (existingUser) {
+      return reply.code(409).send({
+        message: "Email already registered",
       });
     }
+
+    const newUser = await User.create(validationResult.data);
+    
+    const { password, _id, ...safeUser } = newUser.toObject();    
+
+    return reply.code(201).send({ user: safeUser });
+
+  } catch (error: any) {
+    console.error(error);
+    return reply.code(500).send({
+      message: "Internal Server Error",
+    });
   }
+}
 
   /**
    * Get all users todo
