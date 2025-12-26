@@ -45,18 +45,103 @@ export default class ProductController {
   }
 
   /* GET ALL */
-  static async getAll(
-    _request: FastifyRequest,
-    reply: FastifyReply
-  ) {
-    const products = await Product.find().sort({ createdAt: -1 });
+ static async getAll(
+  request: FastifyRequest<{
+    Querystring: {
+      page?: number;
+      limit?: number;
+      search?: string;
+      category?: string;
+      minPrice?: number;
+      maxPrice?: number;
+      hasDiscount?: boolean;
+      isActive?: boolean;
+      sortBy?: string;
+      sortOrder?: "asc" | "desc";
+    };
+  }>,
+  reply: FastifyReply
+) {
+  const {
+    page = 1,
+    limit = 10,
+    search,
+    category,
+    minPrice,
+    maxPrice,
+    hasDiscount,
+    isActive = true,
+    sortBy = "createdAt",
+    sortOrder = "desc",
+  } = request.query;
 
-    return reply.send({
-      success: true,
-      count: products.length,
-      data: products,
-    });
+  const skip = (page - 1) * limit;
+
+  /* ------------------ FILTER BUILDING ------------------ */
+  const filter: any = {};
+
+  // Active products only
+  filter.isActive = isActive;
+
+  // Category filter
+  if (category) {
+    filter.category = category;
   }
+
+  // Price range
+  if (minPrice || maxPrice) {
+    filter.price = {};
+    if (minPrice) filter.price.$gte = minPrice;
+    if (maxPrice) filter.price.$lte = maxPrice;
+  }
+
+  // Discount filter
+  if (hasDiscount === true) {
+    filter.discountPrice = { $exists: true, $ne: null };
+  }
+
+  // Search (name + description + brand)
+  if (search) {
+    filter.$or = [
+      { name: { $regex: search, $options: "i" } },
+      { description: { $regex: search, $options: "i" } },
+      { brand: { $regex: search, $options: "i" } },
+    ];
+  }
+
+  /* ------------------ SORTING ------------------ */
+  const sort: any = {
+    [sortBy]: sortOrder === "asc" ? 1 : -1,
+  };
+
+  /* ------------------ DB QUERIES ------------------ */
+  const [products, totalItems] = await Promise.all([
+    Product.find(filter)
+      .sort(sort)
+      .skip(skip)
+      .limit(limit),
+
+    Product.countDocuments(filter),
+  ]);
+
+  const totalPages = Math.ceil(totalItems / limit);
+
+  /* ------------------ RESPONSE ------------------ */
+  return reply.send({
+    success: true,
+    data: products,
+
+    pagination: {
+      totalItems,
+      totalPages,
+      currentPage: page,
+      limit,
+      hasNextPage: page < totalPages,
+      hasPrevPage: page > 1,
+    },
+  });
+}
+
 
   /* GET ONE */
   static async getById(
