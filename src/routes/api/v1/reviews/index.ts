@@ -6,6 +6,7 @@ export default async function reviewRoutes(
 ) {
   fastify.post(
     "/",
+    { preHandler: fastify.authenticate },
     ReviewController.createReview
   );
 

@@ -57,10 +57,11 @@ export default class UserController {
    * Get all users todo
    */
   static async getUsers(
-    _request: FastifyRequest,
+    request: FastifyRequest,
     reply: FastifyReply
   ) {
     try {
+
       const users = await User.find()
         .select("-password")
         .sort({ createdAt: -1 });
@@ -77,11 +78,11 @@ export default class UserController {
    * Get single user by ID
    */
   static async getUserById(
-    request: FastifyRequest<{ Params: { id: string } }>,
+    request: FastifyRequest,
     reply: FastifyReply
   ) {
     try {
-      const { id } = request.params;
+      const { id } = request.params as { id: string };
 
       const user = await User.findById(id).select("-password");
 
@@ -101,18 +102,16 @@ export default class UserController {
    * Update user
    */
   static async updateUser(
-    request: FastifyRequest<{
-      Params: { id: string };
-      Body: Partial<Record<string, any>>;
-    }>,
+    request: FastifyRequest,
     reply: FastifyReply
   ) {
     try {
-      const { id } = request.params;
+      const { id } = request.params as { id: string };
+      const body = request.body as any
 
       const updatedUser = await User.findByIdAndUpdate(
         id,
-        request.body,
+        body,
         {
           new: true,
           runValidators: true,
@@ -135,11 +134,11 @@ export default class UserController {
    * Delete (soft delete) user
    */
   static async deleteUser(
-    request: FastifyRequest<{ Params: { id: string } }>,
+    request: FastifyRequest,
     reply: FastifyReply
   ) {
     try {
-      const { id } = request.params;
+      const { id } = request.params as { id: string };
 
       const user = await User.findByIdAndUpdate(
         id,

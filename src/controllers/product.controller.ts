@@ -13,7 +13,7 @@ import Category, { ICategory } from "../models/category.model";
 export default class ProductController {
   /* CREATE */
   static async create(
-    request: FastifyRequest<{ Body: CreateProductInput }>,
+    request: FastifyRequest,
     reply: FastifyReply
   ) {
 
@@ -74,20 +74,7 @@ export default class ProductController {
 
   /* GET ALL */
   static async getAll(
-    request: FastifyRequest<{
-      Querystring: {
-        page?: number;
-        limit?: number;
-        search?: string;
-        category?: string;
-        minPrice?: number;
-        maxPrice?: number;
-        hasDiscount?: boolean;
-        isActive?: boolean;
-        sortBy?: string;
-        sortOrder?: "asc" | "desc";
-      };
-    }>,
+    request: FastifyRequest,
     reply: FastifyReply
   ) {
     const {
@@ -101,7 +88,19 @@ export default class ProductController {
       isActive = true,
       sortBy = "createdAt",
       sortOrder = "desc",
-    } = request.query;
+    } = request.query as {
+      page?: number;
+      limit?: number;
+      search?: string;
+      category?: string;
+      minPrice?: number;
+      maxPrice?: number;
+      hasDiscount?: boolean;
+      isActive?: boolean;
+      sortBy?: string;
+      sortOrder?: "asc" | "desc";
+    };
+
 
     const skip = (page - 1) * limit;
 
@@ -173,10 +172,13 @@ export default class ProductController {
 
   /* GET ONE */
   static async getById(
-    request: FastifyRequest<{ Params: { id: string } }>,
+    request: FastifyRequest,
     reply: FastifyReply
   ) {
-    const product = await Product.findById(request.params.id);
+
+    const { id } = request.params as { id: string };
+
+    const product = await Product.findById(id);
 
     if (!product) {
       return reply.code(404).send({ message: "Product not found" });
@@ -190,15 +192,15 @@ export default class ProductController {
 
   /* UPDATE */
   static async update(
-    request: FastifyRequest<{
-      Params: { id: string };
-      Body: UpdateProductInput;
-    }>,
+    request: FastifyRequest,
     reply: FastifyReply
   ) {
+    const { id } = request.params as { id: string };
+    const body = request.body as UpdateProductInput;
+
     const product = await Product.findByIdAndUpdate(
-      request.params.id,
-      request.body,
+      id,
+      body,
       { new: true }
     );
 
@@ -214,10 +216,12 @@ export default class ProductController {
 
   /* DELETE */
   static async delete(
-    request: FastifyRequest<{ Params: { id: string } }>,
+    request: FastifyRequest,
     reply: FastifyReply
   ) {
-    const product = await Product.findByIdAndDelete(request.params.id);
+    const { id } = request.params as { id: string };
+
+    const product = await Product.findByIdAndDelete(id);
 
     if (!product) {
       return reply.code(404).send({ message: "Product not found" });

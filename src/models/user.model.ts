@@ -26,7 +26,7 @@ export interface IUserMethods {
 /**
  * User document
  */
-export interface IUser extends Document ,IUserMethods{
+export interface IUser extends Document , IUserMethods{
   firstName: string;
   lastName: string;
   email: string;

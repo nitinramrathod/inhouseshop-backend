@@ -2,53 +2,45 @@ import UserModel from "../models/user.model";
 import { FastifyRequest, FastifyReply } from "fastify";
 import { loginSchema } from "../schemas/auth.schema";
 import { validateZod } from "../utils/zodValidator";
+
 interface LoginRequestBody {
   email: string;
   password: string;
 }
 
-export async function login(
-  request: FastifyRequest<{ Body: LoginRequestBody }>,
-  reply: FastifyReply
-) {
-  try {
+class AuthController {
+  static async login(
+    request: FastifyRequest<{ Body: LoginRequestBody }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const validationResult = validateZod(loginSchema, request.body);
 
-    const validationResult = validateZod(
-        loginSchema,
-        request.body
-    );
+      if (!validationResult.success) {
+        return reply
+          .code(validationResult.statusCode)
+          .send({
+            message: validationResult.message,
+            errors: validationResult.errors,
+          });
+      }
 
-    if (!validationResult.success) {
-      return reply
-        .code(validationResult.statusCode)
-        .send({
-          message: validationResult.message,
-          errors: validationResult.errors,
+      const { email, password } = validationResult.data;
+
+      const user = await UserModel.findOne({ email });
+
+      if (!user || !(await user.comparePassword(password))) {
+        return reply.status(404).send({
+          errors: { password: "Email or password is incorrect" },
         });
-    }
+      }
 
-    const { email, password } = validationResult.data;
- 
-    // let isValid = await validateLogin(fields, reply);
-  
-    // if (isValid) {
-    //   return;
-    // }
+      const token = await reply.jwtSign(
+        { id: user._id, email: user.email },
+        { expiresIn: "48h" }
+      );
 
-    const user = await UserModel.findOne({ email });
-
-    if (!user || !(await user.comparePassword(password))) {
-      return reply.status(404).send({errors:{ password: "Email or password is incorrect" }});
-    }
-
-    // Generate JWT token
-    const token = await reply.jwtSign(
-      { userId: user._id, email: user.email },
-      { expiresIn: "48h" }
-    );    
-
-      reply.status(200)
-      .send({
+      return reply.status(200).send({
         message: "Login successful",
         token,
         user: {
@@ -57,17 +49,21 @@ export async function login(
           email: user.email,
         },
       });
+    } catch (err) {
+      return reply.status(500).send({
+        error: "Failed to login",
+        details: err,
+      });
+    }
+  }
 
-  } catch (err) {
-    reply.status(500).send({ error: "Failed to login", details: err });
+  static async logout(
+    request: FastifyRequest<{ Params: { id: string } }>,
+    reply: FastifyReply
+  ) {
+    // Implement later
+    return reply.send({ message: "Logout successful" });
   }
 }
 
-async function logout(
-  request: FastifyRequest<{ Params: { id: string } }>,
-  reply: FastifyReply
-) {
-
-}
-
-export default { login, logout };
+export default AuthController;

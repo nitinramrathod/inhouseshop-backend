@@ -4,7 +4,9 @@ import CartController from "../../../../controllers/cart.controller";
 export default async function cartRoutes(
   fastify: FastifyInstance
 ) {
-  fastify.get("/", CartController.getCart);
+  fastify.get("/", 
+    { preHandler: fastify.authenticate },
+     CartController.getCart);
 
   fastify.post("/", CartController.addToCart);
 

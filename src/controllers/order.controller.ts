@@ -10,16 +10,16 @@ import { Types } from "mongoose";
 export default class OrderController {
   /* CREATE ORDER */
   static async createOrder(
-    request: FastifyRequest<{ Body: CreateOrderInput }>,
+    request: FastifyRequest,
     reply: FastifyReply
   ) {
 
     try {
-
+      const body = request.body as CreateOrderInput
 
       const validationResult = validateZod(
         createOrderSchema,
-        request.body
+        body
       );
 
       if (!validationResult.success) {
@@ -31,14 +31,9 @@ export default class OrderController {
           });
       }
 
-      // assuming user is attached by auth middleware
       const input = validationResult.data;
 
-      // TODO make user id dynamic
-      // const userId = (request as any).user?.id || "694d78cd1ee24228b3597a9f";
-      const userId = "694d78cd1ee24228b3597a9f";
-
-      console.log('input===>', input)
+      const userId = (request as any).user?.id;
 
       const orderData = {
         user: new Types.ObjectId(userId),

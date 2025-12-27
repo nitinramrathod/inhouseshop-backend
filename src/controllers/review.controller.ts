@@ -9,23 +9,25 @@ import { validateZod } from "../utils/zodValidator";
 export default class ReviewController {
   /* CREATE REVIEW */
   static async createReview(
-    request: FastifyRequest<{ Body: CreateReviewInput }>,
+    request: FastifyRequest,
     reply: FastifyReply
   ) {
 
+    const body = request.body as CreateReviewInput;
+
     const validationResult = validateZod(
-          createReviewSchema,
-          request.body
-        );
-    
-        if (!validationResult.success) {
-          return reply
-            .code(validationResult.statusCode)
-            .send({
-              message: validationResult.message,
-              errors: validationResult.errors,
-            });
-        }
+      createReviewSchema,
+      body
+    );
+
+    if (!validationResult.success) {
+      return reply
+        .code(validationResult.statusCode)
+        .send({
+          message: validationResult.message,
+          errors: validationResult.errors,
+        });
+    }
 
     const userId = (request as any).user?.id;
 

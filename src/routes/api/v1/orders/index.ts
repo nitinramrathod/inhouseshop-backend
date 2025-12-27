@@ -6,11 +6,13 @@ export default async function orderRoutes(
 ) {
   fastify.post(
     "/",
+    { preHandler: fastify.authenticate },
     OrderController.createOrder
   );
 
   fastify.get(
     "/",
+    { preHandler: fastify.authenticate },
     OrderController.getOrders
   );
 
