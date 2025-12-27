@@ -12,16 +12,26 @@ export default class ReviewController {
     request: FastifyRequest<{ Body: CreateReviewInput }>,
     reply: FastifyReply
   ) {
-    const validatedBody = validateZod(
-      createReviewSchema,
-      request.body
-    );
+
+    const validationResult = validateZod(
+          createReviewSchema,
+          request.body
+        );
+    
+        if (!validationResult.success) {
+          return reply
+            .code(validationResult.statusCode)
+            .send({
+              message: validationResult.message,
+              errors: validationResult.errors,
+            });
+        }
 
     const userId = (request as any).user?.id;
 
     const review = await Review.create({
       user: userId,
-      ...validatedBody,
+      ...validationResult.data,
     });
 
     return reply.code(201).send({

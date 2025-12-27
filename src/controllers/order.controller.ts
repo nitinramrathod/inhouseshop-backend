@@ -5,6 +5,7 @@ import {
   createOrderSchema,
 } from "../schemas/order.schema";
 import { validateZod } from "../utils/zodValidator";
+import { Types } from "mongoose";
 
 export default class OrderController {
   /* CREATE ORDER */
@@ -12,23 +13,57 @@ export default class OrderController {
     request: FastifyRequest<{ Body: CreateOrderInput }>,
     reply: FastifyReply
   ) {
-    const validatedBody = validateZod(
-      createOrderSchema,
-      request.body
-    );
 
-    // assuming user is attached by auth middleware
-    const userId = (request as any).user?.id;
+    try {
 
-    const order = await Order.create({
-      user: userId,
-      ...validatedBody,
-    });
 
-    return reply.code(201).send({
-      success: true,
-      data: order,
-    });
+      const validationResult = validateZod(
+        createOrderSchema,
+        request.body
+      );
+
+      if (!validationResult.success) {
+        return reply
+          .code(validationResult.statusCode)
+          .send({
+            message: validationResult.message,
+            errors: validationResult.errors,
+          });
+      }
+
+      // assuming user is attached by auth middleware
+      const input = validationResult.data;
+
+      // TODO make user id dynamic
+      // const userId = (request as any).user?.id || "694d78cd1ee24228b3597a9f";
+      const userId = "694d78cd1ee24228b3597a9f";
+
+      console.log('input===>', input)
+
+      const orderData = {
+        user: new Types.ObjectId(userId),
+
+        items: input.items.map(item => ({
+          product: new Types.ObjectId(item.product),
+          quantity: item.quantity,
+          price: item.price,
+        })),
+
+        totalAmount: input.totalAmount,
+
+        paymentStatus: input.paymentMethod === "ONLINE" ? "PAID" : "PENDING",
+      };
+
+      const order = await Order.create(orderData);
+
+      return reply.code(201).send({
+        success: true,
+        data: order,
+      });
+
+    } catch (error) {
+      console.log('error==>', error)
+    }
   }
 
   /* GET ALL ORDERS (ADMIN) */

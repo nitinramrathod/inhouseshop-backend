@@ -26,6 +26,7 @@ export interface IOrder extends Document {
     | "CANCELLED";
 
   paymentStatus: "PENDING" | "PAID" | "FAILED";
+  paymentMethod: "COD" | "ONLINE";
 
   shippingAddress: {
     fullName: string;
@@ -81,6 +82,12 @@ const orderSchema = new Schema<IOrder>(
       type: String,
       enum: ["PENDING", "PAID", "FAILED"],
       default: "PENDING",
+    },
+
+     paymentMethod: {
+      type: String,
+      enum: ["COD", "ONLINE"],
+      default: "COD",
     },
 
     shippingAddress: {

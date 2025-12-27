@@ -6,6 +6,7 @@ import {
   createProductSchema,
 } from "../schemas/product.schema";
 import { validateZod } from "../utils/zodValidator";
+import bodyParser from "../utils/bodyParser";
 
 export default class ProductController {
   /* CREATE */
@@ -18,16 +19,31 @@ export default class ProductController {
       return reply
         .status(422)
         .send({ error: "Request must be multipart/form-data" });
-    } 
+    }
 
-    // await uploadCloudinary(part);
+    const fields: any = await bodyParser(request);
+
+    console.log("fields===>", fields)
+
+    const images: string[] = Object.keys(fields).filter(key => key.startsWith("images["))
+      .sort((a, b) => {
+        const ai = Number(a.match(/\d+/)?.[0]);
+        const bi = Number(b.match(/\d+/)?.[0]);
+        return ai - bi;
+      })
+      .map(key => fields[key]);
 
     const validationResult = validateZod(
       createProductSchema,
-      request.body
+      {
+        ...fields,
+        images,
+        price: Number(fields.price),
+        stock: Number(fields.stock)
+      }
     );
 
-      if (!validationResult.success) {
+    if (!validationResult.success) {
       return reply
         .code(validationResult.statusCode)
         .send({
@@ -45,102 +61,102 @@ export default class ProductController {
   }
 
   /* GET ALL */
- static async getAll(
-  request: FastifyRequest<{
-    Querystring: {
-      page?: number;
-      limit?: number;
-      search?: string;
-      category?: string;
-      minPrice?: number;
-      maxPrice?: number;
-      hasDiscount?: boolean;
-      isActive?: boolean;
-      sortBy?: string;
-      sortOrder?: "asc" | "desc";
+  static async getAll(
+    request: FastifyRequest<{
+      Querystring: {
+        page?: number;
+        limit?: number;
+        search?: string;
+        category?: string;
+        minPrice?: number;
+        maxPrice?: number;
+        hasDiscount?: boolean;
+        isActive?: boolean;
+        sortBy?: string;
+        sortOrder?: "asc" | "desc";
+      };
+    }>,
+    reply: FastifyReply
+  ) {
+    const {
+      page = 1,
+      limit = 10,
+      search,
+      category,
+      minPrice,
+      maxPrice,
+      hasDiscount,
+      isActive = true,
+      sortBy = "createdAt",
+      sortOrder = "desc",
+    } = request.query;
+
+    const skip = (page - 1) * limit;
+
+    /* ------------------ FILTER BUILDING ------------------ */
+    const filter: any = {};
+
+    // Active products only
+    filter.isActive = isActive;
+
+    // Category filter
+    if (category) {
+      filter.category = category;
+    }
+
+    // Price range
+    if (minPrice || maxPrice) {
+      filter.price = {};
+      if (minPrice) filter.price.$gte = minPrice;
+      if (maxPrice) filter.price.$lte = maxPrice;
+    }
+
+    // Discount filter
+    if (hasDiscount === true) {
+      filter.discountPrice = { $exists: true, $ne: null };
+    }
+
+    // Search (name + description + brand)
+    if (search) {
+      filter.$or = [
+        { name: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
+        { brand: { $regex: search, $options: "i" } },
+      ];
+    }
+
+    /* ------------------ SORTING ------------------ */
+    const sort: any = {
+      [sortBy]: sortOrder === "asc" ? 1 : -1,
     };
-  }>,
-  reply: FastifyReply
-) {
-  const {
-    page = 1,
-    limit = 10,
-    search,
-    category,
-    minPrice,
-    maxPrice,
-    hasDiscount,
-    isActive = true,
-    sortBy = "createdAt",
-    sortOrder = "desc",
-  } = request.query;
 
-  const skip = (page - 1) * limit;
+    /* ------------------ DB QUERIES ------------------ */
+    const [products, totalItems] = await Promise.all([
+      Product.find(filter)
+        .sort(sort)
+        .skip(skip)
+        .limit(limit),
 
-  /* ------------------ FILTER BUILDING ------------------ */
-  const filter: any = {};
+      Product.countDocuments(filter),
+    ]);
 
-  // Active products only
-  filter.isActive = isActive;
+    const totalPages = Math.ceil(totalItems / limit);
 
-  // Category filter
-  if (category) {
-    filter.category = category;
+    /* ------------------ RESPONSE ------------------ */
+    return reply.send({
+      success: true,
+      data: products,
+
+      pagination: {
+        totalItems,
+        totalPages,
+        currentPage: page,
+        limit,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
+    });
   }
-
-  // Price range
-  if (minPrice || maxPrice) {
-    filter.price = {};
-    if (minPrice) filter.price.$gte = minPrice;
-    if (maxPrice) filter.price.$lte = maxPrice;
-  }
-
-  // Discount filter
-  if (hasDiscount === true) {
-    filter.discountPrice = { $exists: true, $ne: null };
-  }
-
-  // Search (name + description + brand)
-  if (search) {
-    filter.$or = [
-      { name: { $regex: search, $options: "i" } },
-      { description: { $regex: search, $options: "i" } },
-      { brand: { $regex: search, $options: "i" } },
-    ];
-  }
-
-  /* ------------------ SORTING ------------------ */
-  const sort: any = {
-    [sortBy]: sortOrder === "asc" ? 1 : -1,
-  };
-
-  /* ------------------ DB QUERIES ------------------ */
-  const [products, totalItems] = await Promise.all([
-    Product.find(filter)
-      .sort(sort)
-      .skip(skip)
-      .limit(limit),
-
-    Product.countDocuments(filter),
-  ]);
-
-  const totalPages = Math.ceil(totalItems / limit);
-
-  /* ------------------ RESPONSE ------------------ */
-  return reply.send({
-    success: true,
-    data: products,
-
-    pagination: {
-      totalItems,
-      totalPages,
-      currentPage: page,
-      limit,
-      hasNextPage: page < totalPages,
-      hasPrevPage: page > 1,
-    },
-  });
-}
 
 
   /* GET ONE */
