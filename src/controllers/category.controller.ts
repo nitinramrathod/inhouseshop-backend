@@ -21,14 +21,14 @@ export default class CategoryController {
         request.body
       );
 
-        if (!validationResult.success) {
-      return reply
-        .code(validationResult.statusCode)
-        .send({
-          message: validationResult.message,
-          errors: validationResult.errors,
-        });
-    }
+      if (!validationResult.success) {
+        return reply
+          .code(validationResult.statusCode)
+          .send({
+            message: validationResult.message,
+            errors: validationResult.errors,
+          });
+      }
 
       const category = await Category.create(validationResult.data);
 

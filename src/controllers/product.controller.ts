@@ -7,6 +7,8 @@ import {
 } from "../schemas/product.schema";
 import { validateZod } from "../utils/zodValidator";
 import bodyParser from "../utils/bodyParser";
+import { generateSKU } from "../utils/generateSKU";
+import Category, { ICategory } from "../models/category.model";
 
 export default class ProductController {
   /* CREATE */
@@ -23,8 +25,6 @@ export default class ProductController {
 
     const fields: any = await bodyParser(request);
 
-    console.log("fields===>", fields)
-
     const images: string[] = Object.keys(fields).filter(key => key.startsWith("images["))
       .sort((a, b) => {
         const ai = Number(a.match(/\d+/)?.[0]);
@@ -33,12 +33,22 @@ export default class ProductController {
       })
       .map(key => fields[key]);
 
+    const category: ICategory | null = await Category.findById(fields.category);
+
+    if (!category) {
+      return reply
+        .status(422)
+        .send({ error: "Category not found for given category id" });
+    }
+
     const validationResult = validateZod(
       createProductSchema,
       {
         ...fields,
+        sku: generateSKU(category?.name, fields.brand),
         images,
         price: Number(fields.price),
+        discountPrice: fields.discountPrice ? Number(fields.discountPrice) : 0,
         stock: Number(fields.stock)
       }
     );
@@ -51,6 +61,8 @@ export default class ProductController {
           errors: validationResult.errors,
         });
     }
+
+    console.log('validationResult.data', validationResult.data)
 
     const product = await Product.create(validationResult.data);
 
