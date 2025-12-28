@@ -18,16 +18,19 @@ export default async function orderRoutes(
 
   fastify.get(
     "/my",
+    { preHandler: fastify.authenticate },
     OrderController.getMyOrders
   );
 
   fastify.get(
     "/:id",
+    { preHandler: fastify.authenticate },
     OrderController.getOrderById
   );
 
   fastify.put(
     "/:id/status",
+    { preHandler: fastify.authenticate },
     OrderController.updateOrderStatus
   );
 }

@@ -17,11 +17,13 @@ export default async function reviewRoutes(
 
   fastify.put(
     "/:id",
+    { preHandler: fastify.authenticate },
     ReviewController.updateReview
   );
 
   fastify.delete(
     "/:id",
+    { preHandler: fastify.authenticate },
     ReviewController.deleteReview
   );
 }

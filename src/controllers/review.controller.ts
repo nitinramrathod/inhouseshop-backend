@@ -62,17 +62,17 @@ export default class ReviewController {
 
   /* UPDATE REVIEW */
   static async updateReview(
-    request: FastifyRequest<{
-      Params: { id: string };
-      Body: Partial<CreateReviewInput>;
-    }>,
+    request: FastifyRequest,
     reply: FastifyReply
   ) {
     const userId = (request as any).user?.id;
 
+    const {id} = request.params as {id:string};
+    const body = request.body as Partial<CreateReviewInput>
+
     const review = await Review.findOneAndUpdate(
-      { _id: request.params.id, user: userId },
-      request.body,
+      { _id: id, user: userId },
+      body,
       { new: true }
     );
 
@@ -90,13 +90,14 @@ export default class ReviewController {
 
   /* DELETE REVIEW */
   static async deleteReview(
-    request: FastifyRequest<{ Params: { id: string } }>,
+    request: FastifyRequest,
     reply: FastifyReply
   ) {
     const userId = (request as any).user?.id;
+     const {id} = request.params as {id:string};
 
     const review = await Review.findOneAndDelete({
-      _id: request.params.id,
+      _id: id,
       user: userId,
     });
 

@@ -98,10 +98,12 @@ export default class OrderController {
 
   /* GET SINGLE ORDER */
   static async getOrderById(
-    request: FastifyRequest<{ Params: { id: string } }>,
+    request: FastifyRequest,
     reply: FastifyReply
   ) {
-    const order = await Order.findById(request.params.id)
+        const {id} = request.params as {id:string};
+
+    const order = await Order.findById(id)
       .populate("user", "email")
       .populate("items.product", "name price");
 
@@ -117,15 +119,15 @@ export default class OrderController {
 
   /* UPDATE ORDER STATUS (ADMIN) */
   static async updateOrderStatus(
-    request: FastifyRequest<{
-      Params: { id: string };
-      Body: { status: string };
-    }>,
+    request: FastifyRequest,
     reply: FastifyReply
   ) {
+
+     const {id} = request.params as {id:string};
+     const {status} = request.body as { status: string };
     const order = await Order.findByIdAndUpdate(
-      request.params.id,
-      { status: request.body.status },
+      id,
+      { status },
       { new: true }
     );
 

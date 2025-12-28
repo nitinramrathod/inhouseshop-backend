@@ -16,16 +16,19 @@ export default async function categoryRoutes(fastify: FastifyInstance) {
 
   fastify.get(
     "/:id",
+     { preHandler: fastify.authenticate },
     CategoryController.getCategoryById
   );
 
   fastify.put(
     "/:id",
+     { preHandler: fastify.authenticate },
     CategoryController.updateCategory
   );
 
   fastify.delete(
     "/:id",
+     { preHandler: fastify.authenticate },
     CategoryController.deleteCategory
   );
 }

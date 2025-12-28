@@ -63,11 +63,11 @@ export default class CategoryController {
    * Get category by ID
    */
   static async getCategoryById(
-    request: FastifyRequest<{ Params: { id: string } }>,
+    request: FastifyRequest,
     reply: FastifyReply
   ) {
     try {
-      const { id } = request.params;
+      const {id} = request.params as {id:string};
 
       const category = await Category.findById(id);
 
@@ -89,18 +89,16 @@ export default class CategoryController {
    * Update category
    */
   static async updateCategory(
-    request: FastifyRequest<{
-      Params: { id: string };
-      Body: Partial<{ name: string; slug: string; isActive: boolean }>;
-    }>,
+    request: FastifyRequest,
     reply: FastifyReply
   ) {
     try {
-      const { id } = request.params;
+      const {id} = request.params as {id:string};
+      const body = request.body as Partial<{ name: string; slug: string; isActive: boolean }>
 
       const category = await Category.findByIdAndUpdate(
         id,
-        request.body,
+        body,
         {
           new: true,
           runValidators: true,
@@ -125,11 +123,11 @@ export default class CategoryController {
    * Delete category (soft delete)
    */
   static async deleteCategory(
-    request: FastifyRequest<{ Params: { id: string } }>,
+    request: FastifyRequest,
     reply: FastifyReply
   ) {
     try {
-      const { id } = request.params;
+      const {id} = request.params as {id:string};
 
       const category = await Category.findByIdAndUpdate(
         id,
