@@ -8,7 +8,8 @@
   },
   "scripts": {
     "test": "node --test test/**/*.test.js",
-    "start": "fastify start -l info src/app.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
     "dev": "fastify start -w -l info -r ts-node/register src/app.ts"
   },
   "keywords": [],

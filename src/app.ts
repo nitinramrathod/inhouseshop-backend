@@ -12,13 +12,15 @@ export default async function app(
 ): Promise<void> {
   // Place here your custom code!
 
-   await connectDB();
+  
 
   // This loads all plugins defined in plugins
   fastify.register(AutoLoad, {
     dir: path.join(__dirname, 'plugins'),
     options: { ...opts }
   })
+
+  await connectDB();
 
   // This loads all routes defined in routes
   fastify.register(AutoLoad, {
