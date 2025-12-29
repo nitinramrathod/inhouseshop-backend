@@ -7,7 +7,8 @@ try {
 
 const server = fastify({ logger: true });
 const port:number = Number(process.env.PORT) || 3001;
-const host:string = process.env.HOST || '0.0.0.0';
+const host:string = '0.0.0.0';
+// const host:string = process.env.HOST || '0.0.0.0';
 
 server.register(App);
 
