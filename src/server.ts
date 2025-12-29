@@ -1,9 +1,12 @@
 import fastify from 'fastify';
 import App from './app';
+import {config} from 'dotenv'
 
-try {
-  process.loadEnvFile()
-} catch {}
+config()
+
+// try {
+//   process.loadEnvFile()
+// } catch {}
 
 const server = fastify({ logger: true });
 const port:number = Number(process.env.PORT) || 3001;
