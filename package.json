@@ -9,7 +9,7 @@
   "scripts": {
     "test": "node --test test/**/*.test.js",
     "build": "tsc",
-    "start": "node dist/server.js",
+    "start": "fastify start dist/app.js --port 3000 --host 0.0.0.0",
     "dev": "fastify start -w -l info -r ts-node/register src/app.ts"
   },
   "keywords": [],
