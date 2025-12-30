@@ -26,21 +26,26 @@
 import Fastify from "fastify";
 import app from "./app";
 
-const server = Fastify({
-  logger: true,
-});
+const server = Fastify({ logger: true });
 
-const PORT = Number(process.env.PORT) || 3000;
+const PORT = Number(process.env.PORT) || 8081;
 const HOST = "0.0.0.0";
 
 async function start() {
-  await server.register(app);
+  try {
+    await server.register(app);
 
-  await server.listen({ port: PORT, host: HOST });
-  console.log(`🚀 Server running on ${HOST}:${PORT}`);
+    const address = await server.listen({ port: PORT, host: HOST });
+
+    server.log.info(`🚀 Server listening at ${address}`);
+  } catch (err) {
+    server.log.error(err);
+    process.exit(1);
+  }
 }
 
 start();
+
 
 
 
