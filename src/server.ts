@@ -5,7 +5,7 @@ const server = Fastify({
   logger: true,
 });
 
-const PORT = Number(process.env.PORT) || 8081;
+const PORT = Number(process.env.PORT) || 8080;
 
 async function start() {
   try {
