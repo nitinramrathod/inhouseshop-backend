@@ -10,13 +10,11 @@ export default async function categoryRoutes(fastify: FastifyInstance) {
 
   fastify.get(
     "/",
-    { preHandler: fastify.authenticate },
     CategoryController.getCategories
   );
 
   fastify.get(
     "/:id",
-     { preHandler: fastify.authenticate },
     CategoryController.getCategoryById
   );
 
