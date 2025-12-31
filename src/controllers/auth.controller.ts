@@ -31,7 +31,8 @@ class AuthController {
 
       if (!user || !(await user.comparePassword(password))) {
         return reply.status(404).send({
-          errors: { password: "Email or password is incorrect" },
+          errors: [{ password: "Email or password is incorrect" }],
+          message: 'Email or password is incorrect'
         });
       }
 
