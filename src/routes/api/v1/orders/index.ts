@@ -27,6 +27,12 @@ export default async function orderRoutes(
     { preHandler: fastify.authenticate },
     OrderController.getOrderById
   );
+  
+  fastify.delete(
+    "/:id",
+    { preHandler: fastify.authenticate },
+    OrderController.deleteOrder
+  );
 
   fastify.put(
     "/:id/status",

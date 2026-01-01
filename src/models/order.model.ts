@@ -27,6 +27,8 @@ export interface IOrder extends Document {
 
   paymentStatus: "PENDING" | "PAID" | "FAILED";
   paymentMethod: "COD" | "ONLINE";
+  isDeleted:boolean;
+  deletedAt?: Date | null;
 
   shippingAddress: {
     fullName: string;
@@ -88,6 +90,17 @@ const orderSchema = new Schema<IOrder>(
       type: String,
       enum: ["COD", "ONLINE"],
       default: "COD",
+    },
+
+    isDeleted: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+
+    deletedAt: {
+      type: Date,
+      default: null,
     },
 
     shippingAddress: {

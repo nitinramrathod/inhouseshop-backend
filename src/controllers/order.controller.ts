@@ -117,6 +117,52 @@ export default class OrderController {
     });
   }
 
+  /* DELETE ORDER (ADMIN - SOFT DELETE) */
+static async deleteOrder(
+  request: FastifyRequest,
+  reply: FastifyReply
+) {
+try {
+  
+
+  const {id} = request.params as {id:string};
+
+  const order = await Order.findById(id);
+
+  if (!order) {
+    return reply.code(404).send({
+      success: false,
+      message: "Order not found",
+    });
+  }
+
+  if (order?.isDeleted) {
+    return reply.code(400).send({
+      success: false,
+      message: "Order already deleted",
+    });
+  }
+
+  order.isDeleted = true;
+  order.deletedAt = new Date();
+
+  await order.save();
+
+  return reply.send({
+    success: true,
+    message: "Order deleted successfully",
+  });
+
+  } catch (error:any) {
+  return reply.send({
+    success: false,
+    error,
+    message: "Error in order deletion",
+  });
+}
+}
+
+
   /* UPDATE ORDER STATUS (ADMIN) */
   static async updateOrderStatus(
     request: FastifyRequest,
