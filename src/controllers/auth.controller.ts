@@ -37,7 +37,12 @@ class AuthController {
       }
 
       const token = await reply.jwtSign(
-        { id: user._id, email: user.email },
+        { id: user._id, 
+          firstName: user.firstName,
+          lastName: user.lastName, 
+          email: user.email, 
+          role: user.role 
+        },
         { expiresIn: "48h" }
       );
 
@@ -46,8 +51,10 @@ class AuthController {
         token,
         user: {
           id: user._id,
-          name: user.firstName,
+          firstName: user.firstName,
+          lastName: user.lastName,
           email: user.email,
+          role: user.role 
         },
       });
     } catch (err) {
