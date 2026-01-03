@@ -199,9 +199,22 @@ export default class ProductController {
     try {
       const { id } = request.params as { id: string };
 
+      const product: any = await Product.findById(id);
+
+      if (!product) {
+        return reply
+          .status(422)
+          .send({ error: "Product not found for given id" });
+      }
+      const existingImages= product.images;
+
       const fields: any = await bodyParser(request);
 
-      console.log('fields==>', fields)
+      if(fields.removedImages.length > 0){
+        fields.removedImages.forEach((imgUrl:string)=>{
+          existingImages.filter((item:string)=>item != imgUrl)
+        })
+      }
 
       const images: string[] = Object.keys(fields).filter(key => key.startsWith("images["))
         .sort((a, b) => {
@@ -213,6 +226,8 @@ export default class ProductController {
 
       const category: ICategory | null = await Category.findById(fields.category);
 
+      const updatedImages = [...existingImages, ...images]
+
       if (!category) {
         return reply
           .status(422)
@@ -223,7 +238,7 @@ export default class ProductController {
         updateProductSchema,
         {
           ...fields,
-          images,
+          images:updatedImages,
           price: Number(fields.price),
           discountPrice: fields.discountPrice ? Number(fields.discountPrice) : 0,
           stock: Number(fields.stock)
@@ -239,11 +254,11 @@ export default class ProductController {
           });
       }
 
-      const product = await Product.findByIdAndUpdate(
+      const updateProduct = await Product.findByIdAndUpdate(
         id,
         {
           ...fields,
-          images,
+          images:updatedImages,
           price: Number(fields.price),
           discountPrice: fields.discountPrice ? Number(fields.discountPrice) : 0,
           stock: Number(fields.stock)
@@ -251,17 +266,17 @@ export default class ProductController {
         { new: true }
       );
 
-      if (!product) {
+      if (!updateProduct) {
         return reply.code(404).send({ message: "Product not found" });
       }
 
       return reply.send({
         success: true,
-        data: product,
+        data: updateProduct,
       });
 
     } catch (error) {
-  console.error(error);
+      console.error(error);
       return reply.code(500).send({ message: "Internal Server Error" });
     }
   }
