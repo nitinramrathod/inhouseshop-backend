@@ -206,12 +206,20 @@ export default class ProductController {
           .status(422)
           .send({ error: "Product not found for given id" });
       }
-      let existingImages= product.images;
+      let existingImages = product.images;      
       
       const fields: any = await bodyParser(request);
 
-      if(fields.removedImages.length > 0){
-        fields.removedImages.forEach((imgUrl:string)=>{
+      const removedImages: string[] = Object.keys(fields).filter(key => key.startsWith("removedImages["))
+        .sort((a, b) => {
+          const ai = Number(a.match(/\d+/)?.[0]);
+          const bi = Number(b.match(/\d+/)?.[0]);
+          return ai - bi;
+        })
+        .map(key => fields[key]);
+
+      if(removedImages.length > 0){
+        removedImages.forEach((imgUrl:string)=>{
          existingImages = existingImages.filter((item:string)=>item != imgUrl)
         })
       }
