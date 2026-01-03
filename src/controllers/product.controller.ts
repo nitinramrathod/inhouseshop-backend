@@ -219,9 +219,10 @@ export default class ProductController {
         .map(key => fields[key]);
 
       if(removedImages.length > 0){
-        removedImages.forEach((imgUrl:string)=>{
-         existingImages = existingImages.filter((item:string)=>item != imgUrl)
-        })
+       existingImages = existingImages.filter(
+        (img: any) => !fields.removedImages.includes(img.publicId)
+      );
+
       }
 
       const images: string[] = Object.keys(fields).filter(key => key.startsWith("images["))
