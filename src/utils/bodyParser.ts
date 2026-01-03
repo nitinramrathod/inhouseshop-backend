@@ -35,10 +35,8 @@ const bodyParser = async (request:FastifyRequest):Promise<ParsedFields> => {
             } catch (error) {
                 console.log('saving to cloudinary error==>', error);
             }
-        } else {
-            
-            fields[part.fieldname] = tryParseJSON(part.value as string);
-           
+        } else {            
+          fields[part.fieldname] = tryParseJSON(part.value as string);           
         }
     }
     return fields

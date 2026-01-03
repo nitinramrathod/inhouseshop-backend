@@ -192,152 +192,155 @@ export default class ProductController {
   }
 
   /* UPDATE */
-  // static async update(
-  //   request: FastifyRequest,
-  //   reply: FastifyReply
-  // ) {
+  static async update(
+    request: FastifyRequest,
+    reply: FastifyReply
+  ) {
+    try {
+      const { id } = request.params as { id: string };
+
+      const fields: any = await bodyParser(request);
+
+      console.log('fields==>', fields)
+
+      const images: string[] = Object.keys(fields).filter(key => key.startsWith("images["))
+        .sort((a, b) => {
+          const ai = Number(a.match(/\d+/)?.[0]);
+          const bi = Number(b.match(/\d+/)?.[0]);
+          return ai - bi;
+        })
+        .map(key => fields[key]);
+
+      const category: ICategory | null = await Category.findById(fields.category);
+
+      if (!category) {
+        return reply
+          .status(422)
+          .send({ error: "Category not found for given category id" });
+      }
+
+      const validationResult = validateZod(
+        updateProductSchema,
+        {
+          ...fields,
+          images,
+          price: Number(fields.price),
+          discountPrice: fields.discountPrice ? Number(fields.discountPrice) : 0,
+          stock: Number(fields.stock)
+        }
+      );
+
+      if (!validationResult.success) {
+        return reply
+          .code(validationResult.statusCode)
+          .send({
+            message: validationResult.message,
+            errors: validationResult.errors,
+          });
+      }
+
+      const product = await Product.findByIdAndUpdate(
+        id,
+        {
+          ...fields,
+          images,
+          price: Number(fields.price),
+          discountPrice: fields.discountPrice ? Number(fields.discountPrice) : 0,
+          stock: Number(fields.stock)
+        },
+        { new: true }
+      );
+
+      if (!product) {
+        return reply.code(404).send({ message: "Product not found" });
+      }
+
+      return reply.send({
+        success: true,
+        data: product,
+      });
+
+    } catch (error) {
+  console.error(error);
+      return reply.code(500).send({ message: "Internal Server Error" });
+    }
+  }
+
+  // static async update(request: FastifyRequest, reply: FastifyReply) {
   //   try {
   //     const { id } = request.params as { id: string };
+  //     const fields = await bodyParser(request);
 
-  //     const fields: any = await bodyParser(request);
-
-  //     const images: string[] = Object.keys(fields).filter(key => key.startsWith("images["))
-  //       .sort((a, b) => {
-  //         const ai = Number(a.match(/\d+/)?.[0]);
-  //         const bi = Number(b.match(/\d+/)?.[0]);
-  //         return ai - bi;
-  //       })
-  //       .map(key => fields[key]);
-
-  //     const category: ICategory | null = await Category.findById(fields.category);
-
-  //     if (!category) {
-  //       return reply
-  //         .status(422)
-  //         .send({ error: "Category not found for given category id" });
-  //     }
-
-  //     const validationResult = validateZod(
-  //       updateProductSchema,
-  //       {
-  //         ...fields,
-  //         images,
-  //         price: Number(fields.price),
-  //         discountPrice: fields.discountPrice ? Number(fields.discountPrice) : 0,
-  //         stock: Number(fields.stock)
-  //       }
-  //     );
-
-  //     if (!validationResult.success) {
-  //       return reply
-  //         .code(validationResult.statusCode)
-  //         .send({
-  //           message: validationResult.message,
-  //           errors: validationResult.errors,
-  //         });
-  //     }
-
-  //     const product = await Product.findByIdAndUpdate(
-  //       id,
-  //       {
-  //         ...fields,
-  //         images,
-  //         price: Number(fields.price),
-  //         discountPrice: fields.discountPrice ? Number(fields.discountPrice) : 0,
-  //         stock: Number(fields.stock)
-  //       },
-  //       { new: true }
-  //     );
-
+  //     const product = await Product.findById(id);
   //     if (!product) {
   //       return reply.code(404).send({ message: "Product not found" });
   //     }
 
-  //     return reply.send({
-  //       success: true,
-  //       data: product,
+  //     // 1️⃣ Existing images user wants to keep
+  //     const existingImages: string[] = Array.isArray(fields.images)
+  //       ? fields.images
+  //       : fields.images
+  //         ? [fields.images]
+  //         : [];
+
+  //     // 2️⃣ Newly uploaded images
+  //     const newImages: string[] = Array.isArray(fields.newImages)
+  //       ? fields.newImages
+  //       : fields.newImages
+  //         ? [fields.newImages]
+  //         : [];
+
+  //     // 3️⃣ Images user wants to delete
+  //     const removedImages: string[] = Array.isArray(fields.removedImages)
+  //       ? fields.removedImages
+  //       : fields.removedImages
+  //         ? [fields.removedImages]
+  //         : [];
+
+  //     // 4️⃣ Final images
+  //     const finalImages = [
+  //       ...existingImages.filter(img => !removedImages.includes(img)),
+  //       ...newImages,
+  //     ];
+
+  //     // 5️⃣ Validate
+  //     const validationResult = validateZod(updateProductSchema, {
+  //       ...fields,
+  //       images: finalImages,
+  //       price: Number(fields.price),
+  //       discountPrice: fields.discountPrice
+  //         ? Number(fields.discountPrice)
+  //         : 0,
+  //       stock: Number(fields.stock),
   //     });
 
+  //     if (!validationResult.success) {
+  //       return reply.code(422).send(validationResult);
+  //     }
+
+  //     const updatedProduct = await Product.findByIdAndUpdate(
+  //       id,
+  //       {
+  //         ...fields,
+  //         images: finalImages,
+  //         price: Number(fields.price),
+  //         discountPrice: fields.discountPrice
+  //           ? Number(fields.discountPrice)
+  //           : 0,
+  //         stock: Number(fields.stock),
+  //       },
+  //       { new: true }
+  //     );
+
+  //     return reply.send({
+  //       success: true,
+  //       data: updatedProduct,
+  //     });
   //   } catch (error) {
-  //     console.log(error)
+  //     console.error(error);
+  //     return reply.code(500).send({ message: "Internal Server Error" });
   //   }
   // }
-
-  static async update(request: FastifyRequest, reply: FastifyReply) {
-  try {
-    const { id } = request.params as { id: string };
-    const fields = await bodyParser(request);
-
-    const product = await Product.findById(id);
-    if (!product) {
-      return reply.code(404).send({ message: "Product not found" });
-    }
-
-    // 1️⃣ Existing images user wants to keep
-    const existingImages: string[] = Array.isArray(fields.images)
-      ? fields.images
-      : fields.images
-      ? [fields.images]
-      : [];
-
-    // 2️⃣ Newly uploaded images
-    const newImages: string[] = Array.isArray(fields.newImages)
-      ? fields.newImages
-      : fields.newImages
-      ? [fields.newImages]
-      : [];
-
-    // 3️⃣ Images user wants to delete
-    const removedImages: string[] = Array.isArray(fields.removedImages)
-      ? fields.removedImages
-      : fields.removedImages
-      ? [fields.removedImages]
-      : [];
-
-    // 4️⃣ Final images
-    const finalImages = [
-      ...existingImages.filter(img => !removedImages.includes(img)),
-      ...newImages,
-    ];
-
-    // 5️⃣ Validate
-    const validationResult = validateZod(updateProductSchema, {
-      ...fields,
-      images: finalImages,
-      price: Number(fields.price),
-      discountPrice: fields.discountPrice
-        ? Number(fields.discountPrice)
-        : 0,
-      stock: Number(fields.stock),
-    });
-
-    if (!validationResult.success) {
-      return reply.code(422).send(validationResult);
-    }
-
-    const updatedProduct = await Product.findByIdAndUpdate(
-      id,
-      {
-        ...fields,
-        images: finalImages,
-        price: Number(fields.price),
-        discountPrice: fields.discountPrice
-          ? Number(fields.discountPrice)
-          : 0,
-        stock: Number(fields.stock),
-      },
-      { new: true }
-    );
-
-    return reply.send({
-      success: true,
-      data: updatedProduct,
-    });
-  } catch (error) {
-    console.error(error);
-    return reply.code(500).send({ message: "Internal Server Error" });
-  }
-}
 
 
   /* DELETE */
