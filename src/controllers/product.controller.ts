@@ -220,7 +220,7 @@ export default class ProductController {
 
       if(removedImages.length > 0){
        existingImages = existingImages.filter(
-        (img: any) => !fields.removedImages.includes(img.publicId)
+        (img: any) => !removedImages.includes(img.publicId)
       );
 
       }
