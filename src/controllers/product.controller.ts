@@ -206,13 +206,13 @@ export default class ProductController {
           .status(422)
           .send({ error: "Product not found for given id" });
       }
-      const existingImages= product.images;
-
+      let existingImages= product.images;
+      
       const fields: any = await bodyParser(request);
 
       if(fields.removedImages.length > 0){
         fields.removedImages.forEach((imgUrl:string)=>{
-          existingImages.filter((item:string)=>item != imgUrl)
+         existingImages = existingImages.filter((item:string)=>item != imgUrl)
         })
       }
 
