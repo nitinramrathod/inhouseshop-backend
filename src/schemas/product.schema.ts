@@ -2,13 +2,13 @@ import { z } from "zod";
 
 /* ---------------- CREATE ---------------- */
 export const createProductSchema = z.object({
-  name: z.string().min(3),
+  title: z.string().min(3),
   brand: z.string(),
   category: z.string(),
   description: z.string().min(10),
 
   price: z.number().positive(),
-  discountPrice: z.number().positive().optional(),
+  discountedPrice: z.number().positive().optional(),
 
   stock: z.number().int().min(0),
   sku: z.string().toUpperCase(),
@@ -26,7 +26,7 @@ export const createProductSchema = z.object({
   isActive: z.boolean().optional(),
 }).refine(
   (data) =>
-    !data.discountPrice || data.discountPrice < data.price,
+    !data.discountedPrice || data.discountedPrice < data.price,
   {
     message: "Discount price must be less than price",
     path: ["discountPrice"],
