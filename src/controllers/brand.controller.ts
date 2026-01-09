@@ -1,20 +1,22 @@
 import { FastifyReply, FastifyRequest } from "fastify";
-import Category from "../models/category.model";
+import Brand from "../models/brand.model";
 import { validateZod } from "../utils/zodValidator";
-import { createCategorySchema } from "../schemas/category.schema";
+import { createBrandSchema } from "../schemas/brand.schema";
 import bodyParser from "../utils/bodyParser";
 import { generateUniqueSlug } from "../utils/generateUniqueSlug";
 
-export default class CategoryController {
+/**
+ * Controller for Brand CRUD operations
+ */
+export default class BrandController {
   /**
-   * Create category
+   * Create brand
    */
-  static async createCategory(
+  static async createBrand(
     request: FastifyRequest,
     reply: FastifyReply
   ) {
     try {
-
       if (!request.isMultipart()) {
         return reply
           .status(422)
@@ -23,13 +25,14 @@ export default class CategoryController {
 
       const fields: any = await bodyParser(request);
 
-      const slug = await generateUniqueSlug(fields.name, Category)
+      // slug generated only on create
+      const slug = await generateUniqueSlug(fields.name, Brand);
 
       const validationResult = validateZod(
-        createCategorySchema,
+        createBrandSchema,
         {
           ...fields,
-          slug
+          slug,
         }
       );
 
@@ -42,9 +45,9 @@ export default class CategoryController {
           });
       }
 
-      const category = await Category.create(validationResult.data);
+      const brand = await Brand.create(validationResult.data);
 
-      return reply.code(201).send(category);
+      return reply.code(201).send(brand);
     } catch (error: any) {
       return reply.code(400).send({
         message: error.message,
@@ -53,17 +56,17 @@ export default class CategoryController {
   }
 
   /**
-   * Get all categories
+   * Get all brands
    */
-  static async getCategories(
+  static async getBrands(
     _request: FastifyRequest,
     reply: FastifyReply
   ) {
     try {
-      const categories = await Category.find()
+      const brands = await Brand.find()
         .sort({ createdAt: -1 });
 
-      return reply.send(categories);
+      return reply.send(brands);
     } catch (error: any) {
       return reply.code(500).send({
         message: error.message,
@@ -72,35 +75,35 @@ export default class CategoryController {
   }
 
   /**
-   * Get category by ID
+   * Get brand by ID
    */
-  static async getCategoryById(
+  static async getBrandById(
     request: FastifyRequest,
     reply: FastifyReply
   ) {
     try {
       const { id } = request.params as { id: string };
 
-      const category = await Category.findById(id);
+      const brand = await Brand.findById(id);
 
-      if (!category) {
+      if (!brand) {
         return reply.code(404).send({
-          message: "Category not found",
+          message: "Brand not found",
         });
       }
 
-      return reply.send(category);
+      return reply.send(brand);
     } catch (error: any) {
       return reply.code(400).send({
-        message: "Invalid category ID",
+        message: "Invalid brand ID",
       });
     }
   }
 
   /**
-   * Update category
+   * Update brand
    */
-  static async updateCategory(
+  static async updateBrand(
     request: FastifyRequest,
     reply: FastifyReply
   ) {
@@ -115,9 +118,11 @@ export default class CategoryController {
 
       const fields: any = await bodyParser(request);
 
-      // const body = request.body as Partial<{ name: string; slug: string; isActive: boolean }>
+      // IMPORTANT:
+      // slug should NOT auto-change when name changes
+      // only update slug if explicitly provided in fields
 
-      const category = await Category.findByIdAndUpdate(
+      const brand = await Brand.findByIdAndUpdate(
         id,
         fields,
         {
@@ -126,13 +131,13 @@ export default class CategoryController {
         }
       );
 
-      if (!category) {
+      if (!brand) {
         return reply.code(404).send({
-          message: "Category not found",
+          message: "Brand not found",
         });
       }
 
-      return reply.send(category);
+      return reply.send(brand);
     } catch (error: any) {
       return reply.code(400).send({
         message: error.message,
@@ -141,29 +146,29 @@ export default class CategoryController {
   }
 
   /**
-   * Delete category (soft delete)
+   * Delete brand (soft delete)
    */
-  static async deleteCategory(
+  static async deleteBrand(
     request: FastifyRequest,
     reply: FastifyReply
   ) {
     try {
       const { id } = request.params as { id: string };
 
-      const category = await Category.findByIdAndUpdate(
+      const brand = await Brand.findByIdAndUpdate(
         id,
         { isActive: false },
         { new: true }
       );
 
-      if (!category) {
+      if (!brand) {
         return reply.code(404).send({
-          message: "Category not found",
+          message: "Brand not found",
         });
       }
 
       return reply.send({
-        message: "Category deactivated successfully",
+        message: "Brand deactivated successfully",
       });
     } catch (error: any) {
       return reply.code(400).send({
