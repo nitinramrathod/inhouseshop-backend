@@ -5,71 +5,129 @@ import Product from "../models/product.model";
 export default class CartController {
   /* GET CART */
   static async getCart(
-    request: FastifyRequest,
-    reply: FastifyReply
-  ) {
-    const { ownerType, ownerId } = getCartOwner(request);
+  request: FastifyRequest,
+  reply: FastifyReply
+) {
+  const { ownerType, ownerId } = getCartOwner(request);
 
-    const cart = await Cart.findOne({ ownerType, ownerId })
-      .populate("items.product");
+  const cart = await Cart.findOne({ ownerType, ownerId }).populate({
+    path: "items.product",
+    select: "title images discountedPrice price",
+  });
 
+  if (!cart) {
     return reply.send({
       success: true,
-      data: cart || { items: [], totalAmount: 0 },
+      data: {
+        _id: null,
+        totalAmount: 0,
+        items: [],
+      },
     });
   }
 
+  const responseCart = {
+    _id: cart._id,
+    totalAmount: cart.totalAmount,
+    items: cart.items.map((item: any) => ({
+      id: item.product._id,
+      title: item.product.title,
+      image: item.product.images?.[0] ?? null,
+      price: item.price,
+      discountedPrice: item.product.discountedPrice ?? item.price,
+      quantity: item.quantity,
+    })),
+  };
+
+  return reply.send({
+    success: true,
+    data: responseCart,
+  });
+}
+
+
   /* ADD TO CART */
   static async addToCart(
-    request: FastifyRequest<{
-      Body: { productId: string; quantity: number };
-    }>,
+    request: FastifyRequest,
     reply: FastifyReply
   ) {
-    const { ownerType, ownerId } = getCartOwner(request);
-    const { productId, quantity } = request.body;
 
-    const product = await Product.findById(productId);
-    if (!product) {
-      return reply.code(404).send({ message: "Product not found" });
-    }
+    try {
 
-    let cart = await Cart.findOne({ ownerType, ownerId });
 
-    if (!cart) {
-      cart = await Cart.create({
-        ownerType,
-        ownerId,
-        items: [],
-        totalAmount: 0,
-      });
-    }
+      const { ownerType, ownerId } = getCartOwner(request);
+      const { productId, quantity } = request.body as { productId: string; quantity: number };
 
-    const itemIndex = cart.items.findIndex(
-      (item) => item.product.toString() === productId
-    );
+      const product = await Product.findById(productId);
+      if (!product) {
+        return reply.code(404).send({ message: "Product not found" });
+      }
 
-    if (itemIndex > -1) {
-      cart.items[itemIndex].quantity += quantity;
-    } else {
-      cart.items.push({
-        product: product._id,
-        quantity,
-        price: product.price,
-      });
-    }
+      let cart = await Cart.findOne({ ownerType, ownerId });
 
-    cart.totalAmount = cart.items.reduce(
-      (sum, item) => sum + item.price * item.quantity,
-      0
-    );
+      if (!cart) {
+        cart = await Cart.create({
+          ownerType,
+          ownerId,
+          items: [],
+          totalAmount: 0,
+        });
+      }
 
-    await cart.save();
+      const itemIndex = cart.items.findIndex(
+        (item) => item.product.toString() === productId
+      );
+
+      if (itemIndex > -1) {
+        cart.items[itemIndex].quantity += quantity;
+      } else {
+        cart.items.push({
+          product: product._id,
+          quantity,
+          price: product.price,
+        });
+      }
+
+      cart.totalAmount = cart.items.reduce(
+        (sum, item) => sum + item.price * item.quantity,
+        0
+      );
+
+      await cart.save();
+
+     // ✅ Populate for response only
+    const populatedCart = await Cart.findById(cart._id).populate({
+      path: "items.product",
+      select: "title images discountedPrice price",
+    });
+
+    const responseCart = {
+      _id: populatedCart?._id,
+      totalAmount: populatedCart?.totalAmount,
+      items: populatedCart?.items.map((item: any) => ({
+        id: item.product._id,
+        title: item.product.title,
+        image: item.product.images?.[0] ?? null,
+        price: item.price,
+        discountedPrice: item.product.discountedPrice ?? item.price,
+        quantity: item.quantity,
+      })),
+    };
 
     return reply.code(201).send({
       success: true,
-      data: cart,
+      data: responseCart,
     });
+
+    } catch (error:any) {
+      console.log('error==>', error)
+
+      return reply.code(500).send({
+        success: false,
+        message: error.message,
+        error,
+      });
+    }
   }
 
   /* UPDATE ITEM QUANTITY */
@@ -163,7 +221,7 @@ function getCartOwner(request: any) {
     return { ownerType: "USER", ownerId: request.user.id };
   }
 
-  const guestId = request.headers["x-guest-id"];
+  const guestId = request?.headers["x-guest-id"];
   if (!guestId) {
     throw new Error("Guest ID missing");
   }

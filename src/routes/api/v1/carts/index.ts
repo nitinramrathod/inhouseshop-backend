@@ -8,7 +8,7 @@ export default async function cartRoutes(
     { preHandler: fastify.authenticate },
      CartController.getCart);
 
-  fastify.post("/", CartController.addToCart);
+  fastify.post("/", { preHandler: fastify.authenticate }, CartController.addToCart);
 
   fastify.put(
     "/:productId",
