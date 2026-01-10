@@ -53,8 +53,7 @@ export default class CartController {
   ) {
 
     try {
-
-
+      
       const { ownerType, ownerId } = getCartOwner(request);
       const { productId, quantity } = request.body as { productId: string; quantity: number };
 
