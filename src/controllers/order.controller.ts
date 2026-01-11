@@ -10,57 +10,6 @@ import { Types } from "mongoose";
 
 export default class OrderController {
   /* CREATE ORDER */
-  // static async createOrder(
-  //   request: FastifyRequest,
-  //   reply: FastifyReply
-  // ) {
-
-  //   try {
-  //     const body = request.body as CreateOrderInput
-
-  //     const validationResult = validateZod(
-  //       createOrderSchema,
-  //       body
-  //     );
-
-  //     if (!validationResult.success) {
-  //       return reply
-  //         .code(validationResult.statusCode)
-  //         .send({
-  //           message: validationResult.message,
-  //           errors: validationResult.errors,
-  //         });
-  //     }
-
-  //     const input = validationResult.data;
-
-  //     const userId = (request as any).user?.id;
-
-  //     const orderData = {
-  //       user: new Types.ObjectId(userId),
-
-  //       items: input.items.map(item => ({
-  //         product: new Types.ObjectId(item.product),
-  //         quantity: item.quantity,
-  //         price: item.price,
-  //       })),
-
-  //       totalAmount: input.totalAmount,
-
-  //       paymentStatus: input.paymentMethod === "ONLINE" ? "PAID" : "PENDING",
-  //     };
-
-  //     const order = await Order.create(orderData);
-
-  //     return reply.code(201).send({
-  //       success: true,
-  //       data: order,
-  //     });
-
-  //   } catch (error) {
-  //     console.log('error==>', error)
-  //   }
-  // }
 
   static async createOrder(
     request: FastifyRequest,
@@ -136,7 +85,8 @@ export default class OrderController {
         user: new Types.ObjectId(userId),
         items: orderItems,
         totalAmount,
-        paymentMethod: input.paymentMethod,
+        shippingAddress: input?.shippingAddress,
+        paymentMethod: input?.paymentMethod,
         paymentStatus:
           input.paymentMethod === "ONLINE"
             ? "PAID"
@@ -162,8 +112,8 @@ export default class OrderController {
     reply: FastifyReply
   ) {
     const orders = await Order.find()
-      .populate("user", "email")
-      .populate("items.product", "name price")
+      .populate("user", "email firstName lastName")
+      .populate("items.product", "title price")
       .sort({ createdAt: -1 });
 
     return reply.send({
@@ -181,7 +131,7 @@ export default class OrderController {
     const userId = (request as any).user?.id;
 
     const orders = await Order.find({ user: userId })
-      .populate("items.product", "name price")
+      .populate("items.product", "name price title")
       .sort({ createdAt: -1 });
 
     return reply.send({
