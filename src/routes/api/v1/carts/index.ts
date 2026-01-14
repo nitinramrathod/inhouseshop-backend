@@ -8,11 +8,11 @@ export default async function cartRoutes(
     { preHandler: fastify.authenticate },
      CartController.getCart);
 
-   fastify.post("/merge", 
+  fastify.post("/", { preHandler: fastify.authenticate }, CartController.addToCart)
+
+  fastify.post("/merge", 
     { preHandler: fastify.authenticate },
      CartController.mergeCart);
-
-  fastify.post("/", CartController.addToCart);
 
   fastify.put(
     "/:productId",

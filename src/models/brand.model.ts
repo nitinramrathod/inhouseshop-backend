@@ -1,13 +1,13 @@
 import mongoose, { Schema, Document } from "mongoose";
 
-export interface ICategory extends Document {
+export interface IBrand extends Document {
   name: string;
   slug: string;
   image: string;
   isActive: boolean;
 }
 
-const categorySchema = new Schema<ICategory>(
+const brandSchema = new Schema<IBrand>(
   {
     name: { type: String, required: true },
     slug: { type: String, required: true, unique: true },
@@ -17,4 +17,4 @@ const categorySchema = new Schema<ICategory>(
   { timestamps: true }
 );
 
-export default mongoose.model<ICategory>("Category", categorySchema);
+export default mongoose.model<IBrand>("Brand", brandSchema);

@@ -1,5 +1,6 @@
 import { FastifyReply, FastifyRequest } from "fastify";
 import Order from "../models/order.model";
+import Product from "../models/product.model";
 import {
   CreateOrderInput,
   createOrderSchema,
@@ -9,13 +10,14 @@ import { Types } from "mongoose";
 
 export default class OrderController {
   /* CREATE ORDER */
+
   static async createOrder(
     request: FastifyRequest,
     reply: FastifyReply
   ) {
-
     try {
-      const body = request.body as CreateOrderInput
+      /* ---------------- VALIDATION ---------------- */
+      const body = request.body as CreateOrderInput;
 
       const validationResult = validateZod(
         createOrderSchema,
@@ -23,41 +25,84 @@ export default class OrderController {
       );
 
       if (!validationResult.success) {
-        return reply
-          .code(validationResult.statusCode)
-          .send({
-            message: validationResult.message,
-            errors: validationResult.errors,
-          });
+        return reply.code(validationResult.statusCode).send({
+          message: validationResult.message,
+          errors: validationResult.errors,
+        });
       }
 
       const input = validationResult.data;
 
       const userId = (request as any).user?.id;
 
-      const orderData = {
-        user: new Types.ObjectId(userId),
+      /* ---------------- FETCH PRODUCTS (1 QUERY) ---------------- */
+      const productIds = input.items.map(item =>
+        new Types.ObjectId(item.productId)
+      );
 
-        items: input.items.map(item => ({
-          product: new Types.ObjectId(item.product),
+      const products = await Product.find({
+        _id: { $in: productIds },
+        isActive: true,
+      });
+
+      if (products.length !== productIds.length) {
+        return reply.code(400).send({
+          message: "One or more products are invalid or inactive",
+        });
+      }
+
+      /* ---------------- MAP PRODUCTS ---------------- */
+      const productMap = new Map(
+        products.map(p => [p._id.toString(), p])
+      );
+
+      /* ---------------- BUILD ORDER ITEMS ---------------- */
+      let totalAmount = 0;
+
+      const orderItems = input.items.map(item => {
+        const product = productMap.get(item.productId);
+
+        if (!product) {
+          throw new Error("Product not found");
+        }
+
+        // Use discount price if exists
+        const price =
+          product.discountedPrice ?? product.price;
+
+        const itemTotal = price * item.quantity;
+        totalAmount += itemTotal;
+
+        return {
+          product: product._id,
           quantity: item.quantity,
-          price: item.price,
-        })),
+          price, // snapshot price
+        };
+      });
 
-        totalAmount: input.totalAmount,
-
-        paymentStatus: input.paymentMethod === "ONLINE" ? "PAID" : "PENDING",
-      };
-
-      const order = await Order.create(orderData);
+      /* ---------------- CREATE ORDER ---------------- */
+      const order = await Order.create({
+        user: new Types.ObjectId(userId),
+        items: orderItems,
+        totalAmount,
+        shippingAddress: input?.shippingAddress,
+        paymentMethod: input?.paymentMethod,
+        paymentStatus:
+          input.paymentMethod === "ONLINE"
+            ? "PAID"
+            : "PENDING",
+      });
 
       return reply.code(201).send({
         success: true,
         data: order,
       });
+    } catch (error: any) {
+      console.error("Create order error:", error);
 
-    } catch (error) {
-      console.log('error==>', error)
+      return reply.code(500).send({
+        message: "Failed to create order",
+      });
     }
   }
 
@@ -67,8 +112,8 @@ export default class OrderController {
     reply: FastifyReply
   ) {
     const orders = await Order.find()
-      .populate("user", "email")
-      .populate("items.product", "name price")
+      .populate("user", "email firstName lastName")
+      .populate("items.product", "title price")
       .sort({ createdAt: -1 });
 
     return reply.send({
@@ -86,7 +131,7 @@ export default class OrderController {
     const userId = (request as any).user?.id;
 
     const orders = await Order.find({ user: userId })
-      .populate("items.product", "name price")
+      .populate("items.product", "name price title")
       .sort({ createdAt: -1 });
 
     return reply.send({

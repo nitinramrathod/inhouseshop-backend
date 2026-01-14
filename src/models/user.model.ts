@@ -56,7 +56,7 @@ const addressSchema = new Schema<IUserAddress>(
     type: { type: String, enum: ["HOME", "WORK"], default: "HOME" },
     isDefault: { type: Boolean, default: false },
   },
-  { _id: false } // important: prevents extra _id per address
+  { _id: true } // important: prevents extra _id per address
 );
 
 const userSchema = new Schema<IUser>(

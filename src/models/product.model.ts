@@ -1,12 +1,12 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
 
 export interface IProduct extends Document {
-  name: string;
+  title: string;
   brand: string;
   category: Types.ObjectId;
   description: string;
   price: number;
-  discountPrice?: number;
+  discountedPrice?: number;
   stock: number;
   sku: string;
   specifications: {
@@ -23,7 +23,7 @@ export interface IProduct extends Document {
 
 const productSchema = new Schema<IProduct>(
   {
-    name: { type: String, required: true },
+    title: { type: String, required: true },
     brand: { type: String, required: true },
     category: {
       type: Schema.Types.ObjectId,
@@ -34,7 +34,7 @@ const productSchema = new Schema<IProduct>(
     description: { type: String, required: true },
 
     price: { type: Number, required: true },
-    discountPrice: Number,
+    discountedPrice: {type: Number, required: false},
 
     stock: { type: Number, required: true },
     sku: { type: String, required: true, unique: true },
