@@ -12,7 +12,7 @@ export default async function cartRoutes(
 
   fastify.post("/merge", 
     { preHandler: fastify.authenticate },
-     CartController.mergeCart);
+     CartController.mergeGuestCart);
 
   fastify.put(
     "/:productId",
