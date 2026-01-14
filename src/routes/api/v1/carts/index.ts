@@ -8,6 +8,10 @@ export default async function cartRoutes(
     { preHandler: fastify.authenticate },
      CartController.getCart);
 
+   fastify.post("/merge", 
+    { preHandler: fastify.authenticate },
+     CartController.mergeCart);
+
   fastify.post("/", CartController.addToCart);
 
   fastify.put(
