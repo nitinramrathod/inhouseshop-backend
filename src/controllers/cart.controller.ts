@@ -5,45 +5,45 @@ import Product from "../models/product.model";
 export default class CartController {
   /* GET CART */
   static async getCart(
-  request: FastifyRequest,
-  reply: FastifyReply
-) {
-  const { ownerType, ownerId } = getCartOwner(request);
+    request: FastifyRequest,
+    reply: FastifyReply
+  ) {
+    const { ownerType, ownerId } = getCartOwner(request);
 
-  const cart = await Cart.findOne({ ownerType, ownerId }).populate({
-    path: "items.product",
-    select: "title images discountedPrice price",
-  });
+    const cart = await Cart.findOne({ ownerType, ownerId }).populate({
+      path: "items.product",
+      select: "title images discountedPrice price",
+    });
 
-  if (!cart) {
+    if (!cart) {
+      return reply.send({
+        success: true,
+        data: {
+          _id: null,
+          totalAmount: 0,
+          items: [],
+        },
+      });
+    }
+
+    const responseCart = {
+      _id: cart._id,
+      totalAmount: cart.totalAmount,
+      items: cart.items.map((item: any) => ({
+        id: item.product._id,
+        title: item.product.title,
+        image: item.product.images?.[0] ?? null,
+        price: item.price,
+        discountedPrice: item.product.discountedPrice ?? item.price,
+        quantity: item.quantity,
+      })),
+    };
+
     return reply.send({
       success: true,
-      data: {
-        _id: null,
-        totalAmount: 0,
-        items: [],
-      },
+      data: responseCart,
     });
   }
-
-  const responseCart = {
-    _id: cart._id,
-    totalAmount: cart.totalAmount,
-    items: cart.items.map((item: any) => ({
-      id: item.product._id,
-      title: item.product.title,
-      image: item.product.images?.[0] ?? null,
-      price: item.price,
-      discountedPrice: item.product.discountedPrice ?? item.price,
-      quantity: item.quantity,
-    })),
-  };
-
-  return reply.send({
-    success: true,
-    data: responseCart,
-  });
-}
 
 
   /* ADD TO CART */
@@ -53,7 +53,7 @@ export default class CartController {
   ) {
 
     try {
-      
+
       const { ownerType, ownerId } = getCartOwner(request);
       const { productId, quantity } = request.body as { productId: string; quantity: number };
 
@@ -94,31 +94,31 @@ export default class CartController {
 
       await cart.save();
 
-     // ✅ Populate for response only
-    const populatedCart = await Cart.findById(cart._id).populate({
-      path: "items.product",
-      select: "title images discountedPrice price",
-    });
+      // ✅ Populate for response only
+      const populatedCart = await Cart.findById(cart._id).populate({
+        path: "items.product",
+        select: "title images discountedPrice price",
+      });
 
-    const responseCart = {
-      _id: populatedCart?._id,
-      totalAmount: populatedCart?.totalAmount,
-      items: populatedCart?.items.map((item: any) => ({
-        id: item.product._id,
-        title: item.product.title,
-        image: item.product.images?.[0] ?? null,
-        price: item.price,
-        discountedPrice: item.product.discountedPrice ?? item.price,
-        quantity: item.quantity,
-      })),
-    };
+      const responseCart = {
+        _id: populatedCart?._id,
+        totalAmount: populatedCart?.totalAmount,
+        items: populatedCart?.items.map((item: any) => ({
+          id: item.product._id,
+          title: item.product.title,
+          image: item.product.images?.[0] ?? null,
+          price: item.price,
+          discountedPrice: item.product.discountedPrice ?? item.price,
+          quantity: item.quantity,
+        })),
+      };
 
-    return reply.code(201).send({
-      success: true,
-      data: responseCart,
-    });
+      return reply.code(201).send({
+        success: true,
+        data: responseCart,
+      });
 
-    } catch (error:any) {
+    } catch (error: any) {
       console.log('error==>', error)
 
       return reply.code(500).send({
@@ -130,86 +130,86 @@ export default class CartController {
   }
 
   static async mergeCart(
-  request: FastifyRequest,
-  reply: FastifyReply
-) {
-  try {
+    request: FastifyRequest,
+    reply: FastifyReply
+  ) {
+    try {
 
-    const { ownerType, ownerId } = getCartOwner(request);
-    const { items: guestItems } = request.body as {
-      items: {
-        productId: string;
-        quantity: number;
-      }[]
-    };
+      const { ownerType, ownerId } = getCartOwner(request);
+      const { items: guestItems } = request.body as {
+        items: {
+          productId: string;
+          quantity: number;
+        }[]
+      };
 
-  if (!guestItems || guestItems.length === 0) {
-    return reply.code(200).send({ success: true, data: [] });
+      if (!guestItems || guestItems.length === 0) {
+        return reply.code(200).send({ success: true, data: [] });
+      }
+
+      let cart = await Cart.findOne({ ownerType, ownerId });
+
+      if (!cart) {
+        cart = await Cart.create({
+          ownerType,
+          ownerId,
+          items: [],
+          totalAmount: 0,
+        });
+      }
+
+      // Convert existing cart items to map
+      const cartItemMap = new Map<string, number>();
+
+      cart.items.forEach((item) => {
+        cartItemMap.set(item.product.toString(), item.quantity);
+      });
+
+      // Merge guest items
+      for (const guestItem of guestItems) {
+        const existingQty = cartItemMap.get(guestItem.productId) || 0;
+        cartItemMap.set(
+          guestItem.productId,
+          existingQty + guestItem.quantity
+        );
+      }
+
+      // Rebuild cart items with DB prices
+      const mergedItems = [];
+      let totalAmount = 0;
+
+      for (const [productId, quantity] of cartItemMap.entries()) {
+        const product = await Product.findById(productId);
+
+        if (!product) continue;
+
+        const price = product.price;
+        totalAmount += price * quantity;
+
+        mergedItems.push({
+          product: product._id,
+          quantity,
+          price,
+        });
+      }
+
+      cart.items = mergedItems;
+      cart.totalAmount = totalAmount;
+
+      await cart.save();
+
+      return reply.code(200).send({
+        success: true,
+        data: cart,
+      });
+
+    } catch (error) {
+      return reply.code(500).send({
+        success: false,
+        error
+      });
+    }
   }
-
-  let cart = await Cart.findOne({ ownerType, ownerId });
-
-  if (!cart) {
-    cart = await Cart.create({
-      ownerType,
-      ownerId,
-      items: [],
-      totalAmount: 0,
-    });
-  }
-
-  // Convert existing cart items to map
-  const cartItemMap = new Map<string, number>();
-
-  cart.items.forEach((item) => {
-    cartItemMap.set(item.product.toString(), item.quantity);
-  });
-
-  // Merge guest items
-  for (const guestItem of guestItems) {
-    const existingQty = cartItemMap.get(guestItem.productId) || 0;
-    cartItemMap.set(
-      guestItem.productId,
-      existingQty + guestItem.quantity
-    );
-  }
-
-  // Rebuild cart items with DB prices
-  const mergedItems = [];
-  let totalAmount = 0;
-
-  for (const [productId, quantity] of cartItemMap.entries()) {
-    const product = await Product.findById(productId);
-
-    if (!product) continue;
-
-    const price = product.price;
-    totalAmount += price * quantity;
-
-    mergedItems.push({
-      product: product._id,
-      quantity,
-      price,
-    });
-  }
-
-  cart.items = mergedItems;
-  cart.totalAmount = totalAmount;
-
-  await cart.save();
-
-  return reply.code(200).send({
-    success: true,
-    data: cart,
-  });
-    
-  } catch (error) {
-    return reply.code(200).send({
-    success: false,
-    error
-  });
-  }
-}
 
 
   /* UPDATE ITEM QUANTITY */
