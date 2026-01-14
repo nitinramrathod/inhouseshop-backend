@@ -133,7 +133,9 @@ export default class CartController {
   request: FastifyRequest,
   reply: FastifyReply
 ) {
-  const { ownerType, ownerId } = getCartOwner(request);
+  try {
+
+    const { ownerType, ownerId } = getCartOwner(request);
     const { items: guestItems } = request.body as {
       items: {
         productId: string;
@@ -200,6 +202,13 @@ export default class CartController {
     success: true,
     data: cart,
   });
+    
+  } catch (error) {
+    return reply.code(200).send({
+    success: false,
+    error
+  });
+  }
 }
 
 
