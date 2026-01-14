@@ -358,10 +358,12 @@ export default class CartController {
 
   /* REMOVE ITEM */
   static async removeItem(
-    request: FastifyRequest<{ Params: { productId: string } }>,
+    request: FastifyRequest,
     reply: FastifyReply
   ) {
     const { ownerType, ownerId } = getCartOwner(request);
+
+    const {productId} = request.params as { productId: string };
 
     const cart = await Cart.findOne({ ownerType, ownerId });
     if (!cart) {
@@ -369,7 +371,7 @@ export default class CartController {
     }
 
     cart.items = cart.items.filter(
-      (item) => item.product.toString() !== request.params.productId
+      (item) => item.product.toString() !== productId
     );
 
     cart.totalAmount = cart.items.reduce(

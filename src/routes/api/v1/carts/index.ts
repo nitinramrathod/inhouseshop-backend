@@ -20,7 +20,8 @@ export default async function cartRoutes(
   );
 
   fastify.delete(
-    "/:productId",
+    "/remove/:productId",
+     { preHandler: fastify.authenticate },
     CartController.removeItem
   );
 
