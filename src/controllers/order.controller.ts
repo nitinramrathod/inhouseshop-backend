@@ -6,105 +6,154 @@ import {
   createOrderSchema,
 } from "../schemas/order.schema";
 import { validateZod } from "../utils/zodValidator";
-import { Types } from "mongoose";
+import mongoose, { Types } from "mongoose";
+import { getCartOwner } from "../utils/getCartOwner";
+import cartModel from "../models/cart.model";
 
 export default class OrderController {
   /* CREATE ORDER */
 
-  static async createOrder(
-    request: FastifyRequest,
-    reply: FastifyReply
-  ) {
-    try {
-      /* ---------------- VALIDATION ---------------- */
-      const body = request.body as CreateOrderInput;
+static async createOrder(
+  request: FastifyRequest,
+  reply: FastifyReply
+) {
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-      const validationResult = validateZod(
-        createOrderSchema,
-        body
-      );
+  try {
+    /* ---------------- VALIDATION ---------------- */
+    const body = request.body as CreateOrderInput;
 
-      if (!validationResult.success) {
-        return reply.code(validationResult.statusCode).send({
-          message: validationResult.message,
-          errors: validationResult.errors,
-        });
-      }
+    const validationResult = validateZod(
+      createOrderSchema,
+      body
+    );
 
-      const input = validationResult.data;
-
-      const userId = (request as any).user?.id;
-
-      /* ---------------- FETCH PRODUCTS (1 QUERY) ---------------- */
-      const productIds = input.items.map(item =>
-        new Types.ObjectId(item.productId)
-      );
-
-      const products = await Product.find({
-        _id: { $in: productIds },
-        isActive: true,
-      });
-
-      if (products.length !== productIds.length) {
-        return reply.code(400).send({
-          message: "One or more products are invalid or inactive",
-        });
-      }
-
-      /* ---------------- MAP PRODUCTS ---------------- */
-      const productMap = new Map(
-        products.map(p => [p._id.toString(), p])
-      );
-
-      /* ---------------- BUILD ORDER ITEMS ---------------- */
-      let totalAmount = 0;
-
-      const orderItems = input.items.map(item => {
-        const product = productMap.get(item.productId);
-
-        if (!product) {
-          throw new Error("Product not found");
-        }
-
-        // Use discount price if exists
-        const price =
-          product.discountedPrice ?? product.price;
-
-        const itemTotal = price * item.quantity;
-        totalAmount += itemTotal;
-
-        return {
-          product: product._id,
-          quantity: item.quantity,
-          price, // snapshot price
-        };
-      });
-
-      /* ---------------- CREATE ORDER ---------------- */
-      const order = await Order.create({
-        user: new Types.ObjectId(userId),
-        items: orderItems,
-        totalAmount,
-        shippingAddress: input?.shippingAddress,
-        paymentMethod: input?.paymentMethod,
-        paymentStatus:
-          input.paymentMethod === "ONLINE"
-            ? "PAID"
-            : "PENDING",
-      });
-
-      return reply.code(201).send({
-        success: true,
-        data: order,
-      });
-    } catch (error: any) {
-      console.error("Create order error:", error);
-
-      return reply.code(500).send({
-        message: "Failed to create order",
+    if (!validationResult.success) {
+      await session.abortTransaction();
+      return reply.code(validationResult.statusCode).send({
+        message: validationResult.message,
+        errors: validationResult.errors,
       });
     }
+
+    const input = validationResult.data;
+    const { ownerType, ownerId } = getCartOwner(request);
+
+    /* ---------------- FETCH CART ---------------- */
+    const cart = await cartModel.findOne(
+      { ownerType, ownerId },
+      null,
+      { session }
+    );
+
+    /* ---------------- FETCH PRODUCTS (1 QUERY) ---------------- */
+    const productIds = input.items.map(
+      item => new Types.ObjectId(item.productId)
+    );
+
+    const products = await Product.find(
+      {
+        _id: { $in: productIds },
+        isActive: true,
+      },
+      null,
+      { session }
+    );
+
+    if (products.length !== productIds.length) {
+      throw new Error(
+        "One or more products are invalid or inactive"
+      );
+    }
+
+    /* ---------------- MAP PRODUCTS ---------------- */
+    const productMap = new Map(
+      products.map(p => [p._id.toString(), p])
+    );
+
+    /* ---------------- BUILD ORDER ITEMS ---------------- */
+    let totalAmount = 0;
+
+    const orderItems = input.items.map(item => {
+      const product = productMap.get(item.productId);
+
+      if (!product) {
+        throw new Error("Product not found");
+      }
+
+      const price =
+        product.discountedPrice ?? product.price;
+
+      totalAmount += price * item.quantity;
+
+      return {
+        product: product._id,
+        quantity: item.quantity,
+        price,
+      };
+    });
+
+    /* ---------------- CREATE ORDER ---------------- */
+    const order = await Order.create(
+      [
+        {
+          user: new Types.ObjectId(ownerId),
+          items: orderItems,
+          totalAmount,
+          shippingAddress: input.shippingAddress,
+          paymentMethod: input.paymentMethod,
+          paymentStatus:
+            input.paymentMethod === "ONLINE"
+              ? "PAID"
+              : "PENDING",
+        },
+      ],
+      { session }
+    );
+
+    /* ---------------- REMOVE ITEMS FROM CART ---------------- */
+    if (cart) {
+      const orderedProductIds = new Set(
+        productIds.map(id => id.toString())
+      );
+
+      cart.items = cart.items.filter(
+        item =>
+          !orderedProductIds.has(
+            item.product.toString()
+          )
+      );
+
+      cart.totalAmount = cart.items.reduce(
+        (sum, item) =>
+          sum + item.price * item.quantity,
+        0
+      );
+
+      await cart.save({ session });
+    }
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return reply.code(201).send({
+      success: true,
+      data: order[0],
+    });
+
+  } catch (error: any) {
+    await session.abortTransaction();
+    session.endSession();
+
+    console.error("Create order error:", error);
+
+    return reply.code(500).send({
+      message: error.message || "Failed to create order",
+    });
   }
+}
+
 
   /* GET ALL ORDERS (ADMIN) */
   static async getOrders(
