@@ -106,7 +106,10 @@ export default class BannerController {
             }
 
             const banners = await Banner.find(query)
-                .sort({ priority: -1 });
+                .sort({ priority: -1 }).populate({
+                path: "sliderMeta.product",
+                select: "slug price discountedPrice",
+            });;
 
             return reply.send(banners);
         } catch (error: any) {

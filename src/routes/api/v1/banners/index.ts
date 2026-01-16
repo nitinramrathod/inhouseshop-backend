@@ -24,6 +24,11 @@ export default async function bannerRoutes(
     "/",
     BannerController.getBanners
   );
+  
+  fastify.get(
+    "/active",
+    BannerController.getActiveBanners
+  );
 
   /**
    * Get banner by ID (Public)
