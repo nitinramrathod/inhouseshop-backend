@@ -7,12 +7,12 @@ import { z } from "zod";
 export const BANNER_TYPES = ["BANNER", "SLIDER"] as const;
 
 export const BANNER_POSITIONS = [
-  "HOME_TOP_LEFT_SLIDER",
-  "HOME_TOP_RIGHT_TOP",
-  "HOME_TOP_RIGHT_BOTTOM",
-  "HOME_MIDDLE_TOP",
-  "HOME_MIDDLE_BOTTOM_LEFT",
-  "HOME_MIDDLE_BOTTOM_RIGHT",
+    "HOME_TOP_LEFT_SLIDER",
+    "HOME_TOP_RIGHT_TOP",
+    "HOME_TOP_RIGHT_BOTTOM",
+    "HOME_MIDDLE_TOP",
+    "HOME_MIDDLE_BOTTOM_LEFT",
+    "HOME_MIDDLE_BOTTOM_RIGHT",
 ] as const;
 
 export type BannerType = typeof BANNER_TYPES[number];
@@ -79,12 +79,12 @@ export const createBannerSchema = z.object({
      */
     startAt: z
         .string()
-        .datetime()
+        .regex(/^\d{4}-\d{2}-\d{2}$/)
         .optional(),
 
     endAt: z
         .string()
-        .datetime()
+        .regex(/^\d{4}-\d{2}-\d{2}$/)
         .optional(),
 
     isActive: z.boolean().optional(),
@@ -108,6 +108,15 @@ export const createBannerSchema = z.object({
                     message: "Discount percentage is required for slider banner",
                     code: z.ZodIssueCode.custom,
                 });
+            }
+        }
+        if (data.startAt && data.endAt) {
+            if (new Date(data.startAt) > new Date(data.endAt)) {
+                ctx.addIssue({
+                    path: ['endAt'],
+                    message: 'End date must be after start date',
+                    code: z.ZodIssueCode.custom,
+                })
             }
         }
     });

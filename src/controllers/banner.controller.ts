@@ -25,7 +25,8 @@ export default class BannerController {
                 createBannerSchema,
                 {
                     ...fields,
-                    discountPercentage: Number(fields.discountPercentage)
+                    discountPercentage: Number(fields.discountPercentage),
+                    priority: Number(fields?.priority || 0)
                 }
             );
 
