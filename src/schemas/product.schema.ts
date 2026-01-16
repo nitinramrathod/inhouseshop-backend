@@ -3,6 +3,7 @@ import { z } from "zod";
 /* ---------------- CREATE ---------------- */
 export const createProductSchema = z.object({
   title: z.string().min(3),
+  slug: z.string().min(3),
   brand: z.string(),
   category: z.string(),
   description: z.string().min(10),

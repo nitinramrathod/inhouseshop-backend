@@ -11,6 +11,7 @@ import bodyParser from "../utils/bodyParser";
 import { generateSKU } from "../utils/generateSKU";
 import Category, { ICategory } from "../models/category.model";
 import mongoose from "mongoose";
+import { generateUniqueSlug } from "../utils/generateUniqueSlug";
 
 export default class ProductController {
   /* CREATE */
@@ -43,12 +44,16 @@ export default class ProductController {
         .send({ error: "Category not found for given category id" });
     }
 
+
+    const slug = await generateUniqueSlug(fields.title, Product);
+
     const validationResult = validateZod(
       createProductSchema,
       {
         ...fields,
         sku: generateSKU(category?.name, fields.brand),
         images,
+        slug,
         price: Number(fields.price),
         discountedPrice: fields.discountedPrice ? Number(fields.discountedPrice) : 0,
         stock: Number(fields.stock)
@@ -71,103 +76,6 @@ export default class ProductController {
       data: product,
     });
   }
-
-  /* GET ALL */
-  // static async getAll(
-  //   request: FastifyRequest,
-  //   reply: FastifyReply
-  // ) {
-  //   const {
-  //     page = 1,
-  //     limit = 10,
-  //     search,
-  //     category,
-  //     minPrice,
-  //     maxPrice,
-  //     hasDiscount,
-  //     isActive = true,
-  //     sortBy = "createdAt",
-  //     sortOrder = "desc",
-  //   } = request.query as {
-  //     page?: number;
-  //     limit?: number;
-  //     search?: string;
-  //     category?: string;
-  //     minPrice?: number;
-  //     maxPrice?: number;
-  //     hasDiscount?: boolean;
-  //     isActive?: boolean;
-  //     sortBy?: string;
-  //     sortOrder?: "asc" | "desc";
-  //   };
-
-
-  //   const skip = (page - 1) * limit;
-
-  //   /* ------------------ FILTER BUILDING ------------------ */
-  //   const filter: any = {};
-
-  //   // Active products only
-  //   filter.isActive = isActive;
-
-  //   // Category filter
-  //   if (category) {
-  //     filter.category = category;
-  //   }
-
-  //   // Price range
-  //   if (minPrice || maxPrice) {
-  //     filter.price = {};
-  //     if (minPrice) filter.price.$gte = minPrice;
-  //     if (maxPrice) filter.price.$lte = maxPrice;
-  //   }
-
-  //   // Discount filter
-  //   if (hasDiscount === true) {
-  //     filter.discountPrice = { $exists: true, $ne: null };
-  //   }
-
-  //   // Search (name + description + brand)
-  //   if (search) {
-  //     filter.$or = [
-  //       { name: { $regex: search, $options: "i" } },
-  //       { description: { $regex: search, $options: "i" } },
-  //       { brand: { $regex: search, $options: "i" } },
-  //     ];
-  //   }
-
-  //   /* ------------------ SORTING ------------------ */
-  //   const sort: any = {
-  //     [sortBy]: sortOrder === "asc" ? 1 : -1,
-  //   };
-
-  //   /* ------------------ DB QUERIES ------------------ */
-  //   const [products, totalItems] = await Promise.all([
-  //     Product.find(filter)
-  //       .sort(sort)
-  //       .skip(skip)
-  //       .limit(limit),
-
-  //     Product.countDocuments(filter),
-  //   ]);
-
-  //   const totalPages = Math.ceil(totalItems / limit);
-
-  //   /* ------------------ RESPONSE ------------------ */
-  //   return reply.send({
-  //     success: true,
-  //     data: products,
-
-  //     pagination: {
-  //       totalItems,
-  //       totalPages,
-  //       currentPage: page,
-  //       limit,
-  //       hasNextPage: page < totalPages,
-  //       hasPrevPage: page > 1,
-  //     },
-  //   });
-  // }
 
   static async getAll(
   request: FastifyRequest,
@@ -273,15 +181,15 @@ export default class ProductController {
 
 
   /* GET ONE */
-  static async getById(
+  static async getBySlug(
   request: FastifyRequest,
   reply: FastifyReply
 ) {
-  const { id } = request.params as { id: string };
+  const { slug } = request.params as { slug: string };
 
   const product = await Product.aggregate([
     {
-      $match: { _id: new mongoose.Types.ObjectId(id) },
+      $match: { slug },
     },
 
     /* ----------- LOOKUP REVIEWS ----------- */
