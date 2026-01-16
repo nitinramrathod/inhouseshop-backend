@@ -11,7 +11,7 @@ export default async function productRoutes(fastify: FastifyInstance) {
     ProductController.getAll);
 
   fastify.get(
-    "/:id",
+    "/:slug",
     ProductController.getBySlug
   );
 
