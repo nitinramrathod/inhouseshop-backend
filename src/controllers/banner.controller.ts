@@ -3,6 +3,7 @@ import Banner from "../models/banner.model";
 import { validateZod } from "../utils/zodValidator";
 import bodyParser from "../utils/bodyParser";
 import { createBannerSchema, updateBannerSchema } from "../schemas/banner.schema";
+import { Types } from "mongoose";
 
 export default class BannerController {
     /**
@@ -25,7 +26,7 @@ export default class BannerController {
                 createBannerSchema,
                 {
                     ...fields,
-                    discountPercentage: Number(fields.discountPercentage),
+                    sliderMeta:{...fields.sliderMeta, discountPercentage: Number(fields.discountPercentage)},                    
                     priority: Number(fields?.priority || 0)
                 }
             );
@@ -39,7 +40,18 @@ export default class BannerController {
                     });
             }
 
-            const banner = await Banner.create(validationResult.data);
+            const payload = validationResult.data;
+
+            const banner = await Banner.create({
+                ...payload, sliderMeta: payload.sliderMeta
+                    ? {
+                        ...payload.sliderMeta,
+                        product: payload.sliderMeta.product
+                            ? new Types.ObjectId(payload.sliderMeta.product)
+                            : undefined,
+                    }
+                    : undefined,
+            });
 
             return reply.code(201).send(banner);
         } catch (error: any) {
@@ -58,7 +70,10 @@ export default class BannerController {
     ) {
         try {
             const banners = await Banner.find()
-                .sort({ createdAt: -1 });
+                .sort({ createdAt: -1 }).populate({
+                    path: "sliderMeta.product",
+                    select: "slug price discountedPrice",
+                });
 
             return reply.send(banners);
         } catch (error: any) {
@@ -109,7 +124,7 @@ export default class BannerController {
                 .sort({ priority: -1 }).populate({
                 path: "sliderMeta.product",
                 select: "slug price discountedPrice",
-            });;
+            });
 
             return reply.send(banners);
         } catch (error: any) {

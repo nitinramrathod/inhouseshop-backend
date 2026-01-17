@@ -25,6 +25,17 @@ const BannerPositionEnum = z.enum(BANNER_POSITIONS);
 /**
  * Create banner schema
  */
+const sliderMetaSchema = z.object({
+  product: z
+    .string()
+    .length(24, "Invalid product ID"),
+
+  discountPercentage: z
+    .number()
+    .min(1, "Discount must be at least 1%")
+    .max(99, "Discount cannot exceed 99%"),
+})
+
 export const createBannerSchema = z.object({
     title: z
         .string()
@@ -50,21 +61,7 @@ export const createBannerSchema = z.object({
     /**
      * Optional product reference (used for sliders)
      */
-    product: z
-        .string()
-        .min(24, "Invalid product ID")
-        .optional(),
-
-    /**
-     * Discount percentage (only for slider)
-     */
-    discountPercentage: z
-        .number()
-        .min(1, "Discount must be at least 1%")
-        .max(99, "Discount cannot exceed 99%")
-        .optional(),
-
-
+    sliderMeta: sliderMetaSchema.optional(),
 
     /**
      * Priority ordering
@@ -93,23 +90,31 @@ export const createBannerSchema = z.object({
         /**
          * Slider specific validation
          */
-        if (data.type === "SLIDER") {
-            if (!data.product) {
-                ctx.addIssue({
-                    path: ["product"],
-                    message: "Product is required for slider banner",
-                    code: z.ZodIssueCode.custom,
-                });
-            }
 
-            if (data.discountPercentage === undefined) {
-                ctx.addIssue({
-                    path: ["discountPercentage"],
-                    message: "Discount percentage is required for slider banner",
-                    code: z.ZodIssueCode.custom,
-                });
-            }
+        if (data.type === "SLIDER" && !data.sliderMeta) {
+            ctx.addIssue({
+                path: ["sliderMeta"],
+                message: "sliderMeta is required for SLIDER banners",
+                code: z.ZodIssueCode.custom,
+            })
         }
+
+        // if (data.type === "SLIDER") {
+        //     if (!data?.sliderMeta?.product) {
+        //         ctx.addIssue({
+        //             path: ["product"],
+        //             message: "Product is required for slider banner",
+        //             code: z.ZodIssueCode.custom,
+        //         });
+        //     }
+        //     if (data?.sliderMeta?.discountPercentage === undefined) {
+        //         ctx.addIssue({
+        //             path: ["discountPercentage"],
+        //             message: "Discount percentage is required for slider banner",
+        //             code: z.ZodIssueCode.custom,
+        //         });
+        //     }
+        // }
         if (data.startAt && data.endAt) {
             if (new Date(data.startAt) > new Date(data.endAt)) {
                 ctx.addIssue({
@@ -132,16 +137,7 @@ export const updateBannerSchema = z.object({
     type: BannerTypeEnum.optional(),
     position: BannerPositionEnum.optional(),
 
-    product: z.string().min(24).optional(),
-
-    discountPercentage: z
-        .number()
-        .min(1)
-        .max(99)
-        .optional(),
-
-    ctaText: z.string().min(2).optional(),
-    ctaLink: z.string().min(2).optional(),
+     sliderMeta: sliderMetaSchema.optional(),
 
     priority: z.number().min(0).optional(),
 
